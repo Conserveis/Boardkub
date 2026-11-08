@@ -1,0 +1,122 @@
+spring:
+  application:
+    name: kmitl-connect
+
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/kmitl_connect?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Bangkok&characterEncoding=UTF-8}
+    username: ${DB_USERNAME:kmitl}
+    password: ${DB_PASSWORD:kmitlpass}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      # Keep (maximum-pool-size x max Pods) below the MySQL connection quota.
+      maximum-pool-size: ${DB_POOL_MAX:8}
+      minimum-idle: 2
+      connection-timeout: 20000
+      idle-timeout: 300000
+      max-lifetime: 1200000
+
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+    show-sql: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      # staging and production share one Memorystore instance on different DB numbers
+      database: ${REDIS_DATABASE:0}
+      ssl:
+        enabled: ${REDIS_SSL:false}
+      timeout: 3000ms
+
+  session:
+    timeout: 30m
+    redis:
+      namespace: kmitl:session
+
+  servlet:
+    multipart:
+      # One image per request; the browser already shrinks photos before upload
+      max-file-size: 5MB
+      max-request-size: 6MB
+
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
+server:
+  port: 8080
+  servlet:
+    session:
+      cookie:
+        name: KMITLSESSION
+        http-only: true
+        same-site: lax
+        # Set COOKIE_SECURE=true once the site is served over HTTPS.
+        secure: ${COOKIE_SECURE:false}
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
+app:
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:8081,http://localhost:3000}
+  otp:
+    ttl-minutes: 10
+    # true = write the OTP to the log instead of sending an email (development)
+    dev-mode: ${OTP_DEV_MODE:true}
+    from: ${MAIL_FROM:no-reply@boardkub.local}
+  admin:
+    email: ${ADMIN_EMAIL:admin@kmitl.ac.th}
+    password: ${ADMIN_PASSWORD:Admin@12345}
+  # Per-account limits (per-IP limits are done by Cloud Armor at the load balancer).
+  # Counters live in Redis so every Pod shares them; values below are the defaults.
+  rate-limit:
+    store: ${RATE_LIMIT_STORE:redis}
+    otp-send:       { max: 3,  window-minutes: 15 }   # OTP emails per address
+    otp-verify:     { max: 5,  window-minutes: 15 }   # wrong OTP codes per address
+    login:          { max: 5,  window-minutes: 15 }   # wrong passwords per address
+    post-create:    { max: 5,  window-minutes: 10 }   # new posts per user
+    comment-create: { max: 20, window-minutes: 10 }   # new comments per user
+  storage:
+    # local = folder on disk (docker compose / minikube), gcs = Google Cloud Storage
+    type: ${STORAGE_TYPE:local}
+    local-dir: ${MEDIA_LOCAL_DIR:./media}
+    # Base URL browsers load images from; empty = https://storage.googleapis.com/<bucket>
+    public-base-url: ${MEDIA_PUBLIC_BASE_URL:}
+    gcs:
+      bucket: ${GCS_BUCKET:}
+      # staging/ or production/ — both environments share one bucket
+      prefix: ${STORAGE_PREFIX:}
+  # true = fill each board with one sample post (only while there are no posts yet)
+  seed-sample-posts: ${SEED_SAMPLE_POSTS:false}
+
+logging:
+  level:
+    root: INFO
+    th.ac.kmitl.connect: INFO

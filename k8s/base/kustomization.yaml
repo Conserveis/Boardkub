@@ -1,0 +1,32 @@
+# Shared manifests for every environment.
+# Environment-specific values live in k8s/overlays/<env>.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: boardkub
+    includeSelectors: false
+
+resources:
+  - backend.yaml
+  - frontend.yaml
+  - network-policy.yaml
+
+# Settings that are the same everywhere. Overlays merge their own values on top.
+# Connection details (DB_URL, REDIS_HOST, ...) come from the ConfigMap
+# "backend-infra" and credentials from the Secret "backend-secret"; CI creates
+# both per environment so that no real value is ever committed to Git.
+configMapGenerator:
+  - name: backend-config
+    literals:
+      - JPA_DDL_AUTO=update
+      - DB_POOL_MAX=8
+      - REDIS_PORT=6379
+      - REDIS_SSL=false
+      - SEED_SAMPLE_POSTS=false
+      - OTP_DEV_MODE=true
+      - COOKIE_SECURE=false
+      - TZ=Asia/Bangkok
+      # Images go to Cloud Storage (bucket/prefix come from backend-infra)
+      - STORAGE_TYPE=gcs

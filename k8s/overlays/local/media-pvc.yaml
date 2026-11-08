@@ -1,0 +1,10 @@
+# Local stand-in for Cloud Storage (STORAGE_TYPE=local)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: media
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi

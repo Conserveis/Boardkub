@@ -1,0 +1,95 @@
+# Local cluster (minikube / Docker Desktop / kind) with MySQL and Redis inside
+# the cluster. Demo credentials only — never use these values on Google Cloud.
+#
+#   eval $(minikube docker-env)      # build straight into minikube's Docker
+#   docker build -t boardkub-backend:local  ../../../backend
+#   docker build -t boardkub-frontend:local ../../../frontend
+#   kubectl apply -k k8s/overlays/local
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: boardkub-local
+
+resources:
+  - namespace.yaml
+  - ../../base
+  - mysql.yaml
+  - redis.yaml
+  - media-pvc.yaml
+  - ingress.yaml
+  - data-network-policy.yaml
+
+images:
+  - name: boardkub-backend
+    newName: boardkub-backend
+    newTag: local
+  - name: boardkub-frontend
+    newName: boardkub-frontend
+    newTag: local
+
+configMapGenerator:
+  - name: backend-config
+    behavior: merge
+    literals:
+      - SEED_SAMPLE_POSTS=true
+      # No Cloud Storage on a laptop: keep images on a volume instead
+      - STORAGE_TYPE=local
+      - MEDIA_LOCAL_DIR=/data/media
+  - name: backend-infra
+    literals:
+      - DB_URL=jdbc:mysql://mysql:3306/boardkub?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Bangkok&characterEncoding=UTF-8
+      - REDIS_HOST=redis
+      - REDIS_DATABASE=0
+      - CORS_ORIGINS=http://boardkub.local
+
+secretGenerator:
+  - name: backend-secret
+    literals:
+      - DB_USERNAME=boardkub
+      - DB_PASSWORD=localpass
+      - REDIS_PASSWORD=
+      - ADMIN_EMAIL=admin@kmitl.ac.th
+      - ADMIN_PASSWORD=Admin@12345
+      - MAIL_USERNAME=
+      - MAIL_PASSWORD=
+  - name: mysql-root
+    literals:
+      - MYSQL_ROOT_PASSWORD=localroot
+
+patches:
+  # Images are built locally, so never try to pull them
+  - target: { kind: Deployment, name: "(backend|frontend)" }
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  # A laptop does not need two copies of everything
+  # Images on a ReadWriteOnce volume can belong to one Pod only, so the backend
+  # cannot scale out here. That limitation is exactly why GKE uses Cloud Storage.
+  - target: { kind: HorizontalPodAutoscaler, name: backend }
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 1
+      - op: replace
+        path: /spec/maxReplicas
+        value: 1
+  - target: { kind: Deployment, name: backend }
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+      - op: replace
+        path: /spec/strategy
+        value: { type: Recreate }
+      - op: add
+        path: /spec/template/spec/volumes/-
+        value: { name: media, persistentVolumeClaim: { claimName: media } }
+      - op: add
+        path: /spec/template/spec/containers/0/volumeMounts/-
+        value: { name: media, mountPath: /data/media }
+  - target: { kind: Deployment, name: frontend }
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1

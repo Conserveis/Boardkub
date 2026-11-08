@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Instrument+Serif&family=Inter:wght@400;500;600&family=Noto+Serif+Thai:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <title>บอร์ด — BoardKub</title>
+</head>
+<body>
+<header class="topbar">
+  <div class="inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark" aria-hidden="true"><img src="img/plane.svg" alt=""></span>
+      <span class="brand-name">BoardKub</span>
+    </a>
+    <div class="navpill">
+      <a href="index.html">หน้าแรก</a>
+      <a href="categories.html">หมวดหมู่</a>
+      <div class="searchbox">
+        <label class="visually-hidden" for="search-input">ค้นหากระทู้</label>
+        <input type="search" id="search-input" placeholder="ค้นหากระทู้ เช่น ทุน กยศ.">
+      </div>
+    </div>
+    <nav class="topnav" id="nav-area"></nav>
+  </div>
+</header>
+<main class="wrap">
+  <aside class="sidebar">
+      <h2 class="side-head">หมวดหมู่</h2>
+      <nav id="side-cats"></nav>
+      <p class="side-note">กระทู้ทุกอันมีหัวข้อและลิงก์ถาวร ค้นย้อนหลังได้เสมอ ไม่หายไปตามรุ่น</p>
+    </aside>
+  <div class="content">
+    <p class="crumb"><a href="categories.html?view=all">หมวดหมู่</a> › <span id="crumb-cat"></span></p>
+    <div id="alert" class="alert"></div>
+
+    <div class="head-row">
+      <div class="grow">
+        <h1 id="board-name" style="font-size:27px;font-weight:700">กำลังโหลด...</h1>
+        <p id="board-desc" style="margin-top:3px;font-size:14px;color:var(--muted)"></p>
+      </div>
+      <a class="btn sun" id="new-post-btn" href="#">ตั้งกระทู้ใหม่</a>
+    </div>
+
+    <div class="sortbar">
+      <span class="lbl">เรียงตาม</span>
+      <button type="button" class="pill on" id="sort-latest">ล่าสุด</button>
+      <button type="button" class="pill" id="sort-views">ยอดเข้าชม</button>
+    </div>
+
+    <div id="post-list"><div class="loading">กำลังโหลด...</div></div>
+
+    <div class="pager" id="pager"></div>
+  </div>
+</main>
+<script src="js/app.js"></script>
+<script>
+(async function () {
+  await initPage();
+  const boardId = qs('id');
+  if (!boardId) { location.href = 'categories.html'; return; }
+
+  document.getElementById('new-post-btn').href = 'new-post.html?boardId=' + boardId;
+
+  let page = 0;
+  const size = 10;
+  let sort = 'latest';
+
+  try {
+    const b = await API.board(boardId);
+    document.getElementById('board-name').textContent = b.name;
+    document.getElementById('board-desc').textContent =
+      (b.description || '') + ' · ' + b.postCount + ' กระทู้';
+    document.getElementById('crumb-cat').innerHTML =
+      '<a href="category.html?id=' + b.categoryId + '">' + esc(b.categoryName) + '</a>';
+    document.title = b.name + ' — BoardKub';
+    renderSidebar(b.categoryId);
+  } catch (e) {
+    showAlert('alert', e.message);
+    return;
+  }
+
+  function setSort(next) {
+    sort = next;
+    document.getElementById('sort-latest').className = 'pill' + (next === 'latest' ? ' on' : '');
+    document.getElementById('sort-views').className = 'pill' + (next === 'views' ? ' on' : '');
+    page = 0;
+    load();
+  }
+  document.getElementById('sort-latest').onclick = function () { setSort('latest'); };
+  document.getElementById('sort-views').onclick = function () { setSort('views'); };
+
+  async function load() {
+    const list = document.getElementById('post-list');
+    list.innerHTML = '<div class="loading">กำลังโหลด...</div>';
+    try {
+      const data = await API.posts(boardId, page, size, sort);
+      if (!data.items.length) {
+        list.innerHTML = '<div class="empty">ยังไม่มีกระทู้ในบอร์ดนี้ — เป็นคนแรกที่ตั้งกระทู้เลย</div>';
+      } else {
+        list.innerHTML = data.items.map(function (p) {
+          return '<div class="post-row">' +
+            '<span class="post-count"><span class="n' + (p.commentCount ? '' : ' zero') + '">' +
+            p.commentCount + '</span><span class="l">ตอบ</span></span>' +
+            '<span class="post-main">' +
+            '<a class="p-title" href="post.html?id=' + p.id + '">' + esc(p.title) + '</a>' +
+            '<span class="p-meta">' + esc(p.authorName) + ' · ' + timeAgo(p.createdAt) +
+            ' · ' + p.viewCount + ' เข้าชม</span></span></div>';
+        }).join('');
+      }
+      renderPager(data);
+    } catch (e) {
+      list.innerHTML = '';
+      showAlert('alert', e.message);
+    }
+  }
+
+  function renderPager(data) {
+    const pager = document.getElementById('pager');
+    const nav = data.totalPages > 1
+      ? '<button type="button" class="btn ghost sm" id="prev"' + (page <= 0 ? ' disabled' : '') + '>ก่อนหน้า</button>' +
+        '<span class="pinfo">หน้า ' + (data.page + 1) + ' / ' + data.totalPages + '</span>' +
+        '<button type="button" class="btn ghost sm" id="next"' + (page >= data.totalPages - 1 ? ' disabled' : '') + '>ถัดไป</button>'
+      : '';
+    pager.innerHTML = nav + '<span class="podbar" id="podbar"></span>';
+    const prev = document.getElementById('prev');
+    const next = document.getElementById('next');
+    if (prev) prev.onclick = function () { page--; load(); window.scrollTo(0, 0); };
+    if (next) next.onclick = function () { page++; load(); window.scrollTo(0, 0); };
+    renderPodBar();
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Instrument+Serif&family=Inter:wght@400;500;600&family=Noto+Serif+Thai:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <title>หมวดหมู่ — BoardKub</title>
+</head>
+<body>
+<header class="topbar">
+  <div class="inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark" aria-hidden="true"><img src="img/plane.svg" alt=""></span>
+      <span class="brand-name">BoardKub</span>
+    </a>
+    <div class="navpill">
+      <a href="index.html">หน้าแรก</a>
+      <a href="categories.html">หมวดหมู่</a>
+      <div class="searchbox">
+        <label class="visually-hidden" for="search-input">ค้นหากระทู้</label>
+        <input type="search" id="search-input" placeholder="ค้นหากระทู้ เช่น ทุน กยศ.">
+      </div>
+    </div>
+    <nav class="topnav" id="nav-area"></nav>
+  </div>
+</header>
+<main class="wrap">
+  <aside class="sidebar">
+      <h2 class="side-head">หมวดหมู่</h2>
+      <nav id="side-cats"></nav>
+      <p class="side-note">กระทู้ทุกอันมีหัวข้อและลิงก์ถาวร ค้นย้อนหลังได้เสมอ ไม่หายไปตามรุ่น</p>
+    </aside>
+  <div class="content">
+    <p class="crumb"><a href="categories.html?view=all">หมวดหมู่</a> › <span id="crumb-cat"></span></p>
+    <div class="page-head">
+      <h1 id="cat-name">กำลังโหลด...</h1>
+      <p id="cat-desc"></p>
+    </div>
+    <div id="alert" class="alert"></div>
+    <div id="content"><div class="loading">กำลังโหลด...</div></div>
+    <p class="footnote"><span id="podbar"></span></p>
+  </div>
+</main>
+<script src="js/app.js"></script>
+<script>
+(async function () {
+  const catId = qs('id');
+  if (!catId) { location.href = 'categories.html'; return; }
+  await initPage('', catId);
+
+  const box = document.getElementById('content');
+  try {
+    const [cats, boards] = await Promise.all([API.categories(), API.boards(catId)]);
+    const c = cats.find(function (x) { return String(x.id) === String(catId); });
+    if (!c) {
+      document.getElementById('cat-name').textContent = 'ไม่พบหมวดหมู่';
+      box.innerHTML = '<div class="empty">หมวดหมู่นี้อาจถูกลบไปแล้ว <a href="categories.html">กลับหน้าแรก</a></div>';
+      return;
+    }
+
+    document.title = c.name + ' — BoardKub';
+    document.getElementById('crumb-cat').textContent = c.name;
+    document.getElementById('cat-name').textContent = c.name;
+    document.getElementById('cat-desc').textContent =
+      (c.description ? c.description + ' · ' : '') + boards.length + ' บอร์ด · ' + c.postCount + ' กระทู้';
+
+    if (!boards.length) {
+      box.innerHTML = '<div class="empty">ยังไม่มีบอร์ดในหมวดหมู่นี้</div>';
+      return;
+    }
+    box.innerHTML = boards.map(function (b) {
+      return '<a class="board-row" href="board.html?id=' + b.id + '">' +
+        '<span class="grow"><span class="b-name">' + esc(b.name) + '</span>' +
+        (b.description ? '<span class="b-desc">' + esc(b.description) + '</span>' : '') +
+        '</span><span class="b-count">' + b.postCount + ' กระทู้</span></a>';
+    }).join('');
+  } catch (e) {
+    box.innerHTML = '';
+    showAlert('alert', e.message);
+  }
+})();
+</script>
+</body>
+</html>

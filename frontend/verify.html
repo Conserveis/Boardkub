@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Instrument+Serif&family=Inter:wght@400;500;600&family=Noto+Serif+Thai:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <title>ยืนยันอีเมล — BoardKub</title>
+</head>
+<body>
+<header class="topbar">
+  <div class="inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark" aria-hidden="true"><img src="img/plane.svg" alt=""></span>
+      <span class="brand-name">BoardKub</span>
+    </a>
+    <div class="navpill">
+      <a href="index.html">หน้าแรก</a>
+      <a href="categories.html">หมวดหมู่</a>
+      <div class="searchbox">
+        <label class="visually-hidden" for="search-input">ค้นหากระทู้</label>
+        <input type="search" id="search-input" placeholder="ค้นหากระทู้ เช่น ทุน กยศ.">
+      </div>
+    </div>
+    <nav class="topnav" id="nav-area"></nav>
+  </div>
+</header>
+<main class="auth">
+  <h1>ยืนยันอีเมล</h1>
+  <p class="sub" id="sub">กรอกรหัส OTP 6 หลักที่ส่งไปยังอีเมลของคุณ</p>
+  <div id="alert" class="alert"></div>
+  <div class="panel">
+    <div class="field">
+      <label for="code">รหัส OTP</label>
+      <input type="text" id="code" class="otp-input" maxlength="6" inputmode="numeric" placeholder="000000">
+      <p class="hint">รหัสมีอายุ 10 นาที</p>
+    </div>
+    <button type="button" class="btn block" id="submit">ยืนยัน</button>
+    <p class="foot">ไม่ได้รับรหัส? <a href="#" id="resend">ส่งรหัสใหม่</a></p>
+  </div>
+  <p class="footnote"><span id="podbar"></span></p>
+</main>
+<script src="js/app.js"></script>
+<script>
+(async function () {
+  await initPage();
+  const email = qs('email');
+  if (!email) { location.href = 'register.html'; return; }
+  document.getElementById('sub').textContent = 'กรอกรหัส OTP 6 หลักที่ส่งไปยัง ' + email;
+
+  document.getElementById('submit').onclick = async function () {
+    const code = document.getElementById('code').value.trim();
+    if (code.length !== 6) { showAlert('alert', 'กรุณากรอกรหัส 6 หลัก'); return; }
+    this.disabled = true;
+    try {
+      await API.verify({ email: email, code: code });
+      showAlert('alert', 'ยืนยันอีเมลสำเร็จ กำลังพาไปหน้าเข้าสู่ระบบ...', 'ok');
+      setTimeout(function () { location.href = 'login.html'; }, 1200);
+    } catch (e) { showAlert('alert', e.message); this.disabled = false; }
+  };
+
+  document.getElementById('resend').onclick = async function (e) {
+    e.preventDefault();
+    try {
+      await API.resendOtp({ email: email });
+      showAlert('alert', 'ส่งรหัส OTP ใหม่เรียบร้อยแล้ว', 'ok');
+    } catch (err) { showAlert('alert', err.message); }
+  };
+})();
+</script>
+</body>
+</html>

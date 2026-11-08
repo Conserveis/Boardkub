@@ -1,0 +1,53 @@
+# Redirect http:// to https://
+apiVersion: networking.gke.io/v1beta1
+kind: FrontendConfig
+metadata:
+  name: boardkub-frontend-config
+spec:
+  redirectToHttps:
+    enabled: true
+    responseCodeName: MOVED_PERMANENTLY_DEFAULT
+---
+# Load-balancer settings for the backend Service
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: backend-lb
+spec:
+  healthCheck:
+    type: HTTP
+    port: 8080
+    requestPath: /actuator/health/readiness
+    checkIntervalSec: 15
+    timeoutSec: 5
+    healthyThreshold: 1
+    unhealthyThreshold: 3
+  timeoutSec: 60
+  connectionDraining:
+    drainingTimeoutSec: 30
+  securityPolicy:
+    name: boardkub-armor
+  logging:
+    enable: true
+    sampleRate: 0.5
+---
+# Load-balancer settings for the frontend Service
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: frontend-lb
+spec:
+  healthCheck:
+    type: HTTP
+    port: 80
+    requestPath: /healthz
+    checkIntervalSec: 15
+    timeoutSec: 5
+    healthyThreshold: 1
+    unhealthyThreshold: 3
+  connectionDraining:
+    drainingTimeoutSec: 15
+  securityPolicy:
+    name: boardkub-armor
+  cdn:
+    enabled: false

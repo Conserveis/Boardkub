@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Instrument+Serif&family=Inter:wght@400;500;600&family=Noto+Serif+Thai:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <title>หมวดหมู่ — BoardKub</title>
+</head>
+<body>
+<header class="topbar">
+  <div class="inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark" aria-hidden="true"><img src="img/plane.svg" alt=""></span>
+      <span class="brand-name">BoardKub</span>
+    </a>
+    <div class="navpill">
+      <a href="index.html">หน้าแรก</a>
+      <a href="categories.html">หมวดหมู่</a>
+      <div class="searchbox">
+        <label class="visually-hidden" for="search-input">ค้นหากระทู้</label>
+        <input type="search" id="search-input" placeholder="ค้นหากระทู้ เช่น ทุน กยศ.">
+      </div>
+    </div>
+    <nav class="topnav" id="nav-area"></nav>
+  </div>
+</header>
+<main class="wrap">
+  <aside class="sidebar">
+      <h2 class="side-head">หมวดหมู่</h2>
+      <nav id="side-cats"></nav>
+      <p class="side-note">กระทู้ทุกอันมีหัวข้อและลิงก์ถาวร ค้นย้อนหลังได้เสมอ ไม่หายไปตามรุ่น</p>
+    </aside>
+  <div class="content">
+    <div class="page-head" id="page-head"></div>
+    <div id="alert" class="alert"></div>
+    <div id="content"><div class="loading">กำลังโหลด...</div></div>
+    <p class="footnote"><span id="podbar"></span></p>
+  </div>
+</main>
+<script src="js/app.js"></script>
+<script>
+(async function () {
+  // One page, two views: popular posts (default) or every category (?view=all)
+  const showAll = qs('view') === 'all';
+  await initPage('', showAll ? 'home' : 'popular');
+  const head = document.getElementById('page-head');
+  const box = document.getElementById('content');
+
+  if (!showAll) {
+    document.title = 'กระทู้ยอดนิยม — BoardKub';
+    head.innerHTML = '<h1>กระทู้ยอดนิยม</h1><p>5 กระทู้ที่มีคนเปิดอ่านมากที่สุด</p>';
+    try {
+      const posts = await API.popular();
+      if (!posts.length) {
+        box.innerHTML = '<div class="empty">ยังไม่มีกระทู้ในระบบ เลือกหมวดหมู่ด้านซ้ายแล้วตั้งกระทู้แรกได้เลย</div>';
+        return;
+      }
+      box.innerHTML = '<ol class="top-list">' + posts.map(function (p, i) {
+        return '<li><a class="top-row" href="post.html?id=' + p.id + '">' +
+          '<span class="rank' + (i === 0 ? ' first' : '') + '">' + (i + 1) + '</span>' +
+          '<span class="grow">' +
+            '<span class="top-title">' + esc(p.title) + '</span>' +
+            '<span class="top-meta">' +
+              '<span class="chip">' + esc(p.boardName) + '</span>' +
+              '<span>เปิดอ่าน ' + p.viewCount.toLocaleString('th-TH') + ' ครั้ง</span>' +
+              '<span>' + p.commentCount + ' ความคิดเห็น</span>' +
+            '</span>' +
+          '</span>' +
+          '</a></li>';
+      }).join('') + '</ol>' +
+        '<p class="more-link"><a href="categories.html?view=all">ดูหมวดหมู่ทั้งหมด</a></p>';
+    } catch (e) {
+      box.innerHTML = '';
+      showAlert('alert', e.message);
+    }
+    return;
+  }
+
+  head.innerHTML = '<h1>หมวดหมู่ทั้งหมด</h1><p>เลือกหมวดหมู่ที่ตรงกับเรื่องที่อยากถาม แล้วเข้าบอร์ดย่อยเพื่ออ่านหรือตั้งกระทู้</p>';
+  try {
+    const [cats, boards] = await Promise.all([API.categories(), API.boards()]);
+    if (!cats.length) {
+      box.innerHTML = '<div class="empty">ยังไม่มีหมวดหมู่ในระบบ</div>';
+      return;
+    }
+    box.innerHTML = cats.map(function (c) {
+      const list = boards.filter(function (b) { return b.categoryId === c.id; });
+      const names = list.map(function (b) { return '<span class="chip">' + esc(b.name) + '</span>'; }).join('');
+      return '<a class="cat-row" href="category.html?id=' + c.id + '">' +
+        '<span class="grow">' +
+          '<span class="cat-name">' + esc(c.name) + '</span>' +
+          (c.description ? '<span class="cat-desc">' + esc(c.description) + '</span>' : '') +
+          (names ? '<span class="cat-boards">' + names + '</span>' : '') +
+        '</span>' +
+        '<span class="cat-stats">' +
+          '<span><span class="n">' + list.length + '</span><span class="l">บอร์ด</span></span>' +
+          '<span><span class="n">' + c.postCount + '</span><span class="l">กระทู้</span></span>' +
+        '</span>' +
+        '<span class="cat-arrow" aria-hidden="true">&rarr;</span>' +
+        '</a>';
+    }).join('');
+  } catch (e) {
+    box.innerHTML = '';
+    showAlert('alert', e.message);
+  }
+})();
+</script>
+</body>
+</html>

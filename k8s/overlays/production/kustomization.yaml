@@ -1,0 +1,47 @@
+# Production on GKE behind Cloud Load Balancing (HTTPS + Cloud Armor).
+# CI creates the ConfigMap "backend-infra", the Secret "backend-secret" and the
+# ManagedCertificate "boardkub-cert" (for your domain) before applying this.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: boardkub-production
+
+resources:
+  - ../../base
+  - ingress.yaml
+  - gke-lb-config.yaml
+
+images:
+  - name: boardkub-backend
+    newName: asia-southeast1-docker.pkg.dev/PROJECT_ID/boardkub/backend
+    newTag: latest
+  - name: boardkub-frontend
+    newName: asia-southeast1-docker.pkg.dev/PROJECT_ID/boardkub/frontend
+    newTag: latest
+
+configMapGenerator:
+  - name: backend-config
+    behavior: merge
+    literals:
+      - SEED_SAMPLE_POSTS=false
+      - OTP_DEV_MODE=false
+      - COOKIE_SECURE=true
+      # Trust X-Forwarded-Proto from the Google load balancer (HTTPS links, secure cookie)
+      - SERVER_FORWARD_HEADERS_STRATEGY=framework
+
+patches:
+  # Container-native load balancing (NEG) + per-Service load-balancer settings
+  - target: { kind: Service, name: backend }
+    patch: |-
+      - op: add
+        path: /metadata/annotations
+        value:
+          cloud.google.com/neg: '{"ingress": true}'
+          cloud.google.com/backend-config: '{"default": "backend-lb"}'
+  - target: { kind: Service, name: frontend }
+    patch: |-
+      - op: add
+        path: /metadata/annotations
+        value:
+          cloud.google.com/neg: '{"ingress": true}'
+          cloud.google.com/backend-config: '{"default": "frontend-lb"}'

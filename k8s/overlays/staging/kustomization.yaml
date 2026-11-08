@@ -1,0 +1,48 @@
+# Staging on GKE. No public Ingress: test it with
+#   kubectl -n boardkub-staging port-forward svc/frontend 8080:80
+# CI creates the ConfigMap "backend-infra" and the Secret "backend-secret"
+# from the GitHub environment "staging" before applying this overlay.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: boardkub-staging
+
+resources:
+  - ../../base
+
+images:
+  - name: boardkub-backend
+    newName: asia-southeast1-docker.pkg.dev/PROJECT_ID/boardkub/backend
+    newTag: latest
+  - name: boardkub-frontend
+    newName: asia-southeast1-docker.pkg.dev/PROJECT_ID/boardkub/frontend
+    newTag: latest
+
+configMapGenerator:
+  - name: backend-config
+    behavior: merge
+    literals:
+      - SEED_SAMPLE_POSTS=true
+      - OTP_DEV_MODE=true
+      - COOKIE_SECURE=false
+      - DB_POOL_MAX=5
+
+patches:
+  - target: { kind: HorizontalPodAutoscaler, name: backend }
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 1
+      - op: replace
+        path: /spec/maxReplicas
+        value: 2
+  - target: { kind: Deployment, name: "(backend|frontend)" }
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+  - target: { kind: PodDisruptionBudget }
+    patch: |-
+      - op: replace
+        path: /spec/minAvailable
+        value: 0

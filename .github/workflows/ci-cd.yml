@@ -1,0 +1,191 @@
+name: CI/CD
+
+# 1 Trigger -> 2 Build & Test -> 3 Build Image -> 4 Security Scan -> 5 Push Image
+# -> 6 Deploy to Staging -> 7 Smoke Test -> 8 Deploy to Production (main only)
+#
+# Google Cloud is reached with Workload Identity Federation (keyless): no JSON
+# service-account key is stored in GitHub. See docs/GCP_DEPLOY.md for the setup.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  REGION: asia-southeast1
+  CLUSTER: boardkub
+  AR_REPO: boardkub
+  KUSTOMIZE_VERSION: 5.4.3
+  TRIVY_IMAGE: aquasec/trivy:0.58.1
+
+jobs:
+  # ---------- 2. Build and unit tests (every push and pull request) ----------
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build and run unit tests
+        working-directory: ./backend
+        run: mvn -B clean verify
+
+      - name: Render Kubernetes manifests (catches YAML mistakes early)
+        run: |
+          curl -sSL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" | tar xz
+          for o in local staging production; do ./kustomize build "k8s/overlays/$o" > /dev/null && echo "ok: $o"; done
+
+  # ---------- 3-5. Build images, scan, push to Artifact Registry ----------
+  build-push:
+    needs: build-test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write          # required for Workload Identity Federation
+    outputs:
+      image_prefix: ${{ steps.vars.outputs.image_prefix }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: vars
+        run: echo "image_prefix=${REGION}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${AR_REPO}" >> "$GITHUB_OUTPUT"
+
+      - name: Build images
+        env:
+          PREFIX: ${{ steps.vars.outputs.image_prefix }}
+        run: |
+          docker build -t "$PREFIX/backend:${GITHUB_SHA}"  ./backend
+          docker build -t "$PREFIX/frontend:${GITHUB_SHA}" ./frontend
+
+      - name: Scan images with Trivy (fail on fixable HIGH/CRITICAL)
+        env:
+          PREFIX: ${{ steps.vars.outputs.image_prefix }}
+        run: |
+          for img in backend frontend; do
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$TRIVY_IMAGE" \
+              image --exit-code 1 --ignore-unfixed --severity HIGH,CRITICAL --no-progress \
+              "$PREFIX/$img:${GITHUB_SHA}"
+          done
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.WIF_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Push images
+        env:
+          PREFIX: ${{ steps.vars.outputs.image_prefix }}
+        run: |
+          gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+          docker push "$PREFIX/backend:${GITHUB_SHA}"
+          docker push "$PREFIX/frontend:${GITHUB_SHA}"
+
+  # ---------- 6-7. Deploy to staging + smoke test (develop and main) ----------
+  deploy-staging:
+    needs: build-push
+    runs-on: ubuntu-latest
+    environment: staging
+    concurrency: { group: deploy-staging, cancel-in-progress: false }
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.WIF_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.CLUSTER }}
+          location: ${{ env.REGION }}
+
+      - name: Install kustomize
+        run: |
+          curl -sSL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" | sudo tar xz -C /usr/local/bin kustomize
+
+      - name: Deploy and smoke test
+        env:
+          ENV_NAME: staging
+          NAMESPACE: boardkub-staging
+          IMAGE_PREFIX: ${{ needs.build-push.outputs.image_prefix }}
+          IMAGE_TAG: ${{ github.sha }}
+          CLOUDSQL_IP: ${{ vars.CLOUDSQL_IP }}
+          REDIS_HOST: ${{ vars.REDIS_HOST }}
+          DB_NAME: ${{ vars.DB_NAME }}
+          DB_USERNAME: ${{ vars.DB_USERNAME }}
+          REDIS_DATABASE: ${{ vars.REDIS_DATABASE }}
+          MEDIA_BUCKET: ${{ vars.MEDIA_BUCKET }}
+          ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+        run: ./scripts/deploy.sh
+
+  # ---------- 8. Deploy to production (main only, after staging passed) ----------
+  deploy-production:
+    needs: [build-push, deploy-staging]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # Add "Required reviewers" to this environment in GitHub to get a manual approval gate
+    environment:
+      name: production
+      url: https://${{ vars.DOMAIN }}
+    concurrency: { group: deploy-production, cancel-in-progress: false }
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.WIF_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.CLUSTER }}
+          location: ${{ env.REGION }}
+
+      - name: Install kustomize
+        run: |
+          curl -sSL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" | sudo tar xz -C /usr/local/bin kustomize
+
+      - name: Deploy and smoke test
+        env:
+          ENV_NAME: production
+          NAMESPACE: boardkub-production
+          IMAGE_PREFIX: ${{ needs.build-push.outputs.image_prefix }}
+          IMAGE_TAG: ${{ github.sha }}
+          DOMAIN: ${{ vars.DOMAIN }}
+          CLOUDSQL_IP: ${{ vars.CLOUDSQL_IP }}
+          REDIS_HOST: ${{ vars.REDIS_HOST }}
+          DB_NAME: ${{ vars.DB_NAME }}
+          DB_USERNAME: ${{ vars.DB_USERNAME }}
+          REDIS_DATABASE: ${{ vars.REDIS_DATABASE }}
+          MEDIA_BUCKET: ${{ vars.MEDIA_BUCKET }}
+          ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+        run: ./scripts/deploy.sh

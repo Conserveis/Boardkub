@@ -1,0 +1,70 @@
+# In-cluster MySQL for local development only.
+# On Google Cloud the backend uses Cloud SQL over a private IP instead.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+  labels:
+    app: mysql
+spec:
+  serviceName: mysql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          args: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+          env:
+            - name: MYSQL_DATABASE
+              value: boardkub
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: mysql-root, key: MYSQL_ROOT_PASSWORD }
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef: { name: backend-secret, key: DB_USERNAME }
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: backend-secret, key: DB_PASSWORD }
+          ports:
+            - containerPort: 3306
+          resources:
+            requests: { cpu: "100m", memory: "512Mi" }
+            limits:   { cpu: "500m", memory: "1Gi" }
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$MYSQL_ROOT_PASSWORD\""]
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  labels:
+    app: mysql
+spec:
+  clusterIP: None
+  selector:
+    app: mysql
+  ports:
+    - port: 3306
+      targetPort: 3306

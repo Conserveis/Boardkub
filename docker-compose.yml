@@ -1,0 +1,67 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: kmitl-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: kmitl_connect
+      MYSQL_USER: kmitl
+      MYSQL_PASSWORD: kmitlpass
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ukmitl", "-pkmitlpass"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    container_name: kmitl-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: kmitl-backend
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/kmitl_connect?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Bangkok&characterEncoding=UTF-8
+      DB_USERNAME: kmitl
+      DB_PASSWORD: kmitlpass
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      OTP_DEV_MODE: "true"
+      CORS_ORIGINS: http://localhost:8082
+      JPA_DDL_AUTO: update
+      SEED_SAMPLE_POSTS: "true"
+      # Images go to a folder here; on Google Cloud they go to Cloud Storage
+      STORAGE_TYPE: local
+      MEDIA_LOCAL_DIR: /data/media
+    volumes:
+      - media_data:/data/media
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    container_name: kmitl-frontend
+    depends_on:
+      - backend
+    ports:
+      - "8082:80"
+
+volumes:
+  mysql_data:
+  redis_data:
+  media_data:

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Instrument+Serif&family=Inter:wght@400;500;600&family=Noto+Serif+Thai:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <title>จัดการระบบ — BoardKub</title>
+</head>
+<body>
+<header class="topbar">
+  <div class="inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark" aria-hidden="true"><img src="img/plane.svg" alt=""></span>
+      <span class="brand-name">BoardKub</span>
+    </a>
+    <div class="navpill">
+      <a href="index.html">หน้าแรก</a>
+      <a href="categories.html">หมวดหมู่</a>
+      <div class="searchbox">
+        <label class="visually-hidden" for="search-input">ค้นหากระทู้</label>
+        <input type="search" id="search-input" placeholder="ค้นหากระทู้ เช่น ทุน กยศ.">
+      </div>
+    </div>
+    <nav class="topnav" id="nav-area"></nav>
+  </div>
+</header>
+<main class="wrap narrow">
+  <div class="page-head">
+    <h1>จัดการระบบ</h1>
+    <p>สร้างและลบหมวดหมู่กับบอร์ด (เฉพาะผู้ดูแลระบบ)</p>
+  </div>
+  <div id="alert" class="alert"></div>
+  <div id="admin-body"><div class="loading">กำลังโหลด...</div></div>
+  <p class="footnote"><span id="podbar"></span></p>
+</main>
+<script src="js/app.js"></script>
+<script>
+(async function () {
+  await initPage();
+  if (!requireLogin()) return;
+
+  const body = document.getElementById('admin-body');
+  if (CURRENT_USER.role !== 'ADMIN') {
+    body.innerHTML = '<div class="empty">หน้านี้สำหรับผู้ดูแลระบบเท่านั้น</div>';
+    return;
+  }
+
+  body.innerHTML =
+    '<div class="panel"><h2>เพิ่มหมวดหมู่</h2>' +
+    '<div class="field"><label for="cat-name">ชื่อหมวดหมู่</label><input type="text" id="cat-name" maxlength="100"></div>' +
+    '<div class="field"><label for="cat-desc">คำอธิบาย</label><input type="text" id="cat-desc" maxlength="255"></div>' +
+    '<div class="field"><label for="cat-order">ลำดับการแสดง</label><input type="text" id="cat-order" value="0"></div>' +
+    '<button type="button" class="btn" id="add-cat">เพิ่มหมวดหมู่</button></div>' +
+
+    '<div class="panel"><h2>เพิ่มบอร์ด</h2>' +
+    '<div class="field"><label for="board-cat">หมวดหมู่</label><select id="board-cat"></select></div>' +
+    '<div class="field"><label for="board-name">ชื่อบอร์ด</label><input type="text" id="board-name" maxlength="120"></div>' +
+    '<div class="field"><label for="board-desc">คำอธิบาย</label><input type="text" id="board-desc" maxlength="255"></div>' +
+    '<button type="button" class="btn" id="add-board">เพิ่มบอร์ด</button></div>' +
+
+    '<div class="panel"><h2>รายการปัจจุบัน</h2><div id="tree"><div class="loading">กำลังโหลด...</div></div></div>';
+
+  async function refresh() {
+    const [cats, boards] = await Promise.all([API.categories(), API.boards()]);
+
+    document.getElementById('board-cat').innerHTML =
+      cats.map(function (c) { return '<option value="' + c.id + '">' + esc(c.name) + '</option>'; }).join('');
+
+    const tree = document.getElementById('tree');
+    if (!cats.length) { tree.innerHTML = '<div class="empty">ยังไม่มีหมวดหมู่</div>'; return; }
+
+    tree.innerHTML = cats.map(function (c) {
+      const list = boards.filter(function (b) { return b.categoryId === c.id; });
+      const rows = list.length
+        ? list.map(function (b) {
+            return '<div class="board-row"><span class="grow">' +
+              '<span class="b-name">' + esc(b.name) + '</span>' +
+              '<span class="b-desc">' + esc(b.description || '') + '</span></span>' +
+              '<span class="b-count">' + b.postCount + ' กระทู้</span>' +
+              '<button type="button" class="btn danger sm" data-delboard="' + b.id + '">ปิดบอร์ด</button></div>';
+          }).join('')
+        : '<p class="hint">ยังไม่มีบอร์ด</p>';
+      return '<section class="cat-block"><h2 style="display:flex;align-items:center;gap:12px">' +
+        '<span style="flex-grow:1">' + esc(c.name) + '</span>' +
+        '<button type="button" class="btn danger sm" data-delcat="' + c.id + '">ลบหมวดหมู่</button></h2>' +
+        rows + '</section>';
+    }).join('');
+
+    document.querySelectorAll('[data-delcat]').forEach(function (b) {
+      b.onclick = async function () {
+        if (!confirm('ยืนยันการลบหมวดหมู่นี้?')) return;
+        try { await API.deleteCategory(b.dataset.delcat); hideAlert('alert'); refresh(); }
+        catch (e) { showAlert('alert', e.message); }
+      };
+    });
+    document.querySelectorAll('[data-delboard]').forEach(function (b) {
+      b.onclick = async function () {
+        if (!confirm('ยืนยันการปิดบอร์ดนี้? กระทู้เดิมจะยังคงอยู่ในระบบ')) return;
+        try { await API.deleteBoard(b.dataset.delboard); hideAlert('alert'); refresh(); }
+        catch (e) { showAlert('alert', e.message); }
+      };
+    });
+  }
+
+  document.getElementById('add-cat').onclick = async function () {
+    const name = document.getElementById('cat-name').value.trim();
+    if (!name) { showAlert('alert', 'กรุณากรอกชื่อหมวดหมู่'); return; }
+    try {
+      await API.createCategory({
+        name: name,
+        description: document.getElementById('cat-desc').value.trim(),
+        displayOrder: parseInt(document.getElementById('cat-order').value, 10) || 0
+      });
+      document.getElementById('cat-name').value = '';
+      document.getElementById('cat-desc').value = '';
+      showAlert('alert', 'เพิ่มหมวดหมู่เรียบร้อยแล้ว', 'ok');
+      refresh();
+    } catch (e) { showAlert('alert', e.message); }
+  };
+
+  document.getElementById('add-board').onclick = async function () {
+    const name = document.getElementById('board-name').value.trim();
+    const categoryId = document.getElementById('board-cat').value;
+    if (!name || !categoryId) { showAlert('alert', 'กรุณาเลือกหมวดหมู่และกรอกชื่อบอร์ด'); return; }
+    try {
+      await API.createBoard({
+        categoryId: parseInt(categoryId, 10),
+        name: name,
+        description: document.getElementById('board-desc').value.trim()
+      });
+      document.getElementById('board-name').value = '';
+      document.getElementById('board-desc').value = '';
+      showAlert('alert', 'เพิ่มบอร์ดเรียบร้อยแล้ว', 'ok');
+      refresh();
+    } catch (e) { showAlert('alert', e.message); }
+  };
+
+  refresh();
+})();
+</script>
+</body>
+</html>

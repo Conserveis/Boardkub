@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Instrument+Serif&family=Inter:wght@400;500;600&family=Noto+Serif+Thai:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <title>BoardKub — เว็บบอร์ดนักศึกษา</title>
+</head>
+<body>
+<header class="topbar">
+  <div class="inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark" aria-hidden="true"><img src="img/plane.svg" alt=""></span>
+      <span class="brand-name">BoardKub</span>
+    </a>
+    <div class="navpill">
+      <a href="index.html">หน้าแรก</a>
+      <a href="categories.html">หมวดหมู่</a>
+      <div class="searchbox">
+        <label class="visually-hidden" for="search-input">ค้นหากระทู้</label>
+        <input type="search" id="search-input" placeholder="ค้นหากระทู้ เช่น ทุน กยศ.">
+      </div>
+    </div>
+    <nav class="topnav" id="nav-area"></nav>
+  </div>
+</header>
+<section class="hero hero-full">
+  <div class="flight" aria-hidden="true">
+    <svg class="trail" viewBox="0 0 400 80" preserveAspectRatio="none"><path d="M2 76 C 120 70, 260 50, 398 10" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-dasharray="2 9" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>
+    <img class="plane" src="img/plane.svg" alt="">
+  </div>
+  <h1>ถามมา ตอบไป<br>หาเจอทุกครั้ง</h1>
+  <p>เว็บบอร์ดของนักศึกษา รวมเรื่องทุน วิชาเรียน และกิจกรรมไว้ในที่เดียว แยกเป็นหมวดหมู่ ทุกกระทู้มีที่อยู่ถาวร ค้นย้อนหลังได้เสมอ</p>
+  <div class="hero-actions">
+    <a class="btn sun" href="categories.html">เข้าสู่เว็บบอร์ด</a>
+    <a class="btn hero-ghost" id="hero-join" href="register.html">สมัครสมาชิก</a>
+  </div>
+  <a class="scroll-hint" href="#why" aria-label="เลื่อนลงเพื่ออ่านต่อ"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+</section>
+
+<section class="why" id="why">
+  <h2>ข้อมูลที่ต้องใช้ ไม่ควรจมหายในแชต</h2>
+  <p class="why-lead">ขั้นตอนทุน กำหนดลงทะเบียน หรือคำแนะนำรายวิชา มักถูกส่งต่อในกลุ่มแชตชั่วคราว พอผ่านไปไม่กี่วันก็หาไม่เจอ BoardKub เก็บเรื่องเหล่านี้ไว้เป็นกระทู้ที่หาเจอได้ทุกเมื่อ</p>
+  <div class="why-grid">
+    <div class="why-item">
+      <span class="why-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
+      <h3>แยกเป็นหมวดหมู่</h3>
+      <p>ทุน วิชาเรียน เรื่องทั่วไป และกิจกรรม แบ่งเป็นบอร์ดย่อย ไม่ต้องตามหาว่าเรื่องนี้คุยกันที่กลุ่มไหน</p>
+    </div>
+    <div class="why-item">
+      <span class="why-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg></span>
+      <h3>ค้นย้อนหลังได้</h3>
+      <p>ทุกกระทู้มีลิงก์ถาวร ค้นด้วยคำอย่าง “กยศ.” หรือชื่อวิชาก็เจอ แม้ผ่านไปหลายเทอม</p>
+    </div>
+    <div class="why-item">
+      <span class="why-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/></svg></span>
+      <h3>แนบรูปในกระทู้</h3>
+      <p>แนบประกาศหรือตารางได้สูงสุด 4 รูป ระบบลบข้อมูลตำแหน่ง GPS ออกจากรูปให้ก่อนเผยแพร่</p>
+    </div>
+  </div>
+</section>
+
+<section class="steps">
+  <h2>เริ่มใช้งานใน 3 ขั้น</h2>
+  <ol class="step-list">
+    <li><span class="step-n">1</span><h3>สมัครด้วยอีเมล</h3><p>ยืนยันตัวตนด้วยรหัส OTP ที่ส่งไปทางอีเมล</p></li>
+    <li><span class="step-n">2</span><h3>เลือกหมวดหมู่และบอร์ด</h3><p>เข้าบอร์ดที่ตรงกับเรื่องที่อยากถามหรืออยากรู้</p></li>
+    <li><span class="step-n">3</span><h3>ตั้งกระทู้หรือช่วยตอบ</h3><p>ถามคำถามของคุณ หรือแบ่งปันประสบการณ์ให้รุ่นน้อง</p></li>
+  </ol>
+</section>
+
+<section class="cta-band">
+  <h2>อยากรู้อะไร ถามได้เลย</h2>
+  <a class="btn sun" href="categories.html">เข้าสู่เว็บบอร์ด</a>
+  <p class="footnote"><span id="podbar"></span></p>
+</section>
+
+<script src="js/app.js"></script>
+<script>
+(async function () {
+  await initPage('');
+  if (CURRENT_USER) {
+    const j = document.getElementById('hero-join');
+    if (j) j.remove();
+  }
+})();
+</script>
+</body>
+</html>

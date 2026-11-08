@@ -1,0 +1,138 @@
+# Identity of the backend Pods. With Workload Identity Federation for GKE,
+# IAM grants this Kubernetes ServiceAccount (not a key file) permission to
+# write to the media bucket — see scripts/gcp-setup.sh.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: boardkub-backend
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  labels:
+    app: backend
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      # Let Spring Boot finish in-flight requests on shutdown
+      terminationGracePeriodSeconds: 40
+      serviceAccountName: boardkub-backend
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: backend
+          image: boardkub-backend      # replaced per overlay / by CI
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef: { name: backend-config }
+            - configMapRef: { name: backend-infra }
+            - secretRef:    { name: backend-secret }
+          env:
+            - name: JAVA_OPTS
+              value: "-XX:MaxRAMPercentage=70.0 -XX:+UseSerialGC -Djava.io.tmpdir=/tmp"
+          # GKE Autopilot bills by requests; limits equal requests so that a Pod
+          # gets exactly what it pays for.
+          resources:
+            requests: { cpu: "500m", memory: "1Gi", ephemeral-storage: "1Gi" }
+            limits:   { cpu: "500m", memory: "1Gi", ephemeral-storage: "1Gi" }
+          # Spring Boot starts slowly, so startupProbe guards the first boot and
+          # keeps the liveness probe from killing the Pod prematurely.
+          startupProbe:
+            httpGet: { path: /actuator/health/readiness, port: http }
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            failureThreshold: 36
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: http }
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: http }
+            periodSeconds: 15
+            failureThreshold: 3
+          lifecycle:
+            # Give the load balancer time to stop sending traffic first
+            preStop:
+              exec: { command: ["sleep", "10"] }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  labels:
+    app: backend
+spec:
+  type: ClusterIP
+  selector:
+    app: backend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: backend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+---
+# Keep at least one backend Pod running during node upgrades
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: backend
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: backend

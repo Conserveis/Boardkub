@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 420" preserveAspectRatio="xMidYMax slice">
+  <defs>
+    <filter id="soft" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="14"/></filter>
+    <filter id="softer" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="26"/></filter>
+    <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e6effb"/>
+    </linearGradient>
+  </defs>
+  <g filter="url(#softer)" fill="#ffffff" opacity=".7">
+    <ellipse cx="200" cy="360" rx="320" ry="90"/>
+    <ellipse cx="1380" cy="350" rx="360" ry="100"/>
+    <ellipse cx="800" cy="400" rx="520" ry="80"/>
+  </g>
+  <g filter="url(#soft)" fill="url(#shade)">
+    <ellipse cx="80" cy="340" rx="150" ry="70"/>
+    <ellipse cx="210" cy="300" rx="120" ry="85"/>
+    <ellipse cx="330" cy="350" rx="140" ry="60"/>
+    <ellipse cx="1290" cy="330" rx="130" ry="70"/>
+    <ellipse cx="1420" cy="290" rx="140" ry="95"/>
+    <ellipse cx="1560" cy="330" rx="150" ry="80"/>
+    <ellipse cx="760" cy="410" rx="300" ry="50"/>
+  </g>
+</svg>

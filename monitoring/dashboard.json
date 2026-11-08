@@ -1,0 +1,444 @@
+{
+  "displayName": "BoardKub — Production",
+  "gridLayout": {
+    "columns": "2",
+    "widgets": [
+      {
+        "title": "BoardKub — วิธีอ่าน dashboard นี้",
+        "text": {
+          "format": "MARKDOWN",
+          "content": "**แถวบน** = ชั้น Compute (GKE) · **แถวกลาง** = ทางเข้า (Load Balancer) · **แถวล่าง** = ชั้นข้อมูล (Cloud SQL, Memorystore, Cloud Storage)\n\nระหว่าง load test: CPU ต่อ Pod เกินเส้น 70% → HPA เพิ่ม **จำนวน Backend Pod** → CPU ต่อ Pod ลดลง โดย **latency** และ **5xx** ไม่พุ่ง\n\nระหว่าง rolling update / ลบ Pod: จำนวน Pod ขึ้นลงชั่วครู่ แต่กราฟ **5xx** ควรเป็นศูนย์"
+        }
+      },
+      {
+        "title": "จำนวน Backend Pod (HPA 2–5)",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"kubernetes.io/container/uptime\" resource.type=\"k8s_container\" resource.label.namespace_name=\"boardkub-production\" resource.label.container_name=\"backend\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_MEAN",
+                    "crossSeriesReducer": "REDUCE_COUNT",
+                    "groupByFields": [
+                      "resource.label.namespace_name"
+                    ]
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1",
+              "legendTemplate": "backend pods"
+            },
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"kubernetes.io/container/uptime\" resource.type=\"k8s_container\" resource.label.namespace_name=\"boardkub-production\" resource.label.container_name=\"frontend\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_MEAN",
+                    "crossSeriesReducer": "REDUCE_COUNT",
+                    "groupByFields": [
+                      "resource.label.namespace_name"
+                    ]
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1",
+              "legendTemplate": "frontend pods"
+            }
+          ],
+          "yAxis": {
+            "label": "Pods",
+            "scale": "LINEAR"
+          },
+          "chartOptions": {
+            "mode": "COLOR"
+          }
+        }
+      },
+      {
+        "title": "CPU ต่อ Backend Pod (เทียบ request — HPA เป้าหมาย 70%)",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"kubernetes.io/container/cpu/request_utilization\" resource.type=\"k8s_container\" resource.label.namespace_name=\"boardkub-production\" resource.label.container_name=\"backend\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_MEAN",
+                    "crossSeriesReducer": "REDUCE_MEAN",
+                    "groupByFields": [
+                      "resource.label.pod_name"
+                    ]
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1",
+              "legendTemplate": "${resource.labels.pod_name}"
+            }
+          ],
+          "yAxis": {
+            "label": "utilization",
+            "scale": "LINEAR"
+          },
+          "chartOptions": {
+            "mode": "COLOR"
+          },
+          "thresholds": [
+            {
+              "value": 0.7,
+              "label": "HPA target 70%",
+              "color": "YELLOW",
+              "direction": "ABOVE",
+              "targetAxis": "Y1"
+            }
+          ]
+        }
+      },
+      {
+        "title": "Memory ต่อ Backend Pod (เทียบ limit)",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"kubernetes.io/container/memory/limit_utilization\" resource.type=\"k8s_container\" resource.label.namespace_name=\"boardkub-production\" resource.label.container_name=\"backend\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_MEAN",
+                    "crossSeriesReducer": "REDUCE_MAX",
+                    "groupByFields": [
+                      "resource.label.pod_name"
+                    ]
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1",
+              "legendTemplate": "${resource.labels.pod_name}"
+            }
+          ],
+          "yAxis": {
+            "label": "utilization",
+            "scale": "LINEAR"
+          },
+          "chartOptions": {
+            "mode": "COLOR"
+          }
+        }
+      },
+      {
+        "title": "Container restarts (self-healing)",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"kubernetes.io/container/restart_count\" resource.type=\"k8s_container\" resource.label.namespace_name=\"boardkub-production\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_DELTA",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": [
+                      "resource.label.container_name"
+                    ]
+                  }
+                }
+              },
+              "plotType": "STACKED_BAR",
+              "targetAxis": "Y1",
+              "legendTemplate": "${resource.labels.container_name}"
+            }
+          ],
+          "yAxis": {
+            "label": "restarts",
+            "scale": "LINEAR"
+          },
+          "chartOptions": {
+            "mode": "COLOR"
+          }
+        }
+      },
+      {
+        "title": "Requests/วินาที ที่ Load Balancer แยกตามผลลัพธ์",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"loadbalancing.googleapis.com/https/request_count\" resource.type=\"https_lb_rule\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_RATE",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": [
+                      "metric.label.response_code_class"
+                    ]
+                  }
+                }
+              },
+              "plotType": "STACKED_AREA",
+              "targetAxis": "Y1",
+              "legendTemplate": "${metric.labels.response_code_class}xx"
+            }
+          ],
+          "yAxis": {
+            "label": "req/s",
+            "scale": "LINEAR"
+          },
+          "chartOptions": {
+            "mode": "COLOR"
+          }
+        }
+      },
+      {
+        "title": "Latency ที่ผู้ใช้เห็น (p50 / p95)",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"loadbalancing.googleapis.com/https/total_latencies\" resource.type=\"https_lb_rule\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_DELTA",
+                    "crossSeriesReducer": "REDUCE_PERCENTILE_50"
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1",
+              "legendTemplate": "p50"
+            },
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"loadbalancing.googleapis.com/https/total_latencies\" resource.type=\"https_lb_rule\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_DELTA",
+                    "crossSeriesReducer": "REDUCE_PERCENTILE_95"
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1",
+              "legendTemplate": "p95"
+            }
+          ],
+          "yAxis": {
+            "label": "ms",
+            "scale": "LINEAR"
+          },
+          "chartOptions": {
+            "mode": "COLOR"
+          },
+          "thresholds": [
+            {
+              "value": 1000,
+              "label": "1 s",
+              "color": "YELLOW",
+              "direction": "ABOVE",
+              "targetAxis": "Y1"
+            }
+          ]
+        }
+      },
+      {
+        "title": "Error 5xx/วินาที (ควรเป็น 0 ระหว่าง rolling update)",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"loadbalancing.googleapis.com/https/request_count\" resource.type=\"https_lb_rule\" metric.label.response_code_class=500",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_RATE",
+                    "crossSeriesReducer": "REDUCE_SUM"
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1",
+              "legendTemplate": "5xx"
+            }
+          ],
+          "yAxis": {
+            "label": "req/s",
+            "scale": "LINEAR"
+          },
+          "chartOptions": {
+            "mode": "COLOR"
+          }
+        }
+      },
+      {
+        "title": "คำขอที่ถูกปฏิเสธ 403/429 (Cloud Armor + rate limit ในแอป)",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"loadbalancing.googleapis.com/https/request_count\" resource.type=\"https_lb_rule\" (metric.label.response_code=403 OR metric.label.response_code=429)",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_RATE",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": [
+                      "metric.label.response_code"
+                    ]
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1",
+              "legendTemplate": "HTTP ${metric.labels.response_code}"
+            }
+          ],
+          "yAxis": {
+            "label": "req/s",
+            "scale": "LINEAR"
+          },
+          "chartOptions": {
+            "mode": "COLOR"
+          }
+        }
+      },
+      {
+        "title": "Cloud SQL: CPU",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"cloudsql.googleapis.com/database/cpu/utilization\" resource.type=\"cloudsql_database\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_MEAN",
+                    "crossSeriesReducer": "REDUCE_MEAN"
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1",
+              "legendTemplate": "cpu"
+            }
+          ],
+          "yAxis": {
+            "label": "utilization",
+            "scale": "LINEAR"
+          },
+          "chartOptions": {
+            "mode": "COLOR"
+          },
+          "thresholds": [
+            {
+              "value": 0.8,
+              "label": "80%",
+              "color": "YELLOW",
+              "direction": "ABOVE",
+              "targetAxis": "Y1"
+            }
+          ]
+        }
+      },
+      {
+        "title": "Cloud SQL: Connections",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"cloudsql.googleapis.com/database/network/connections\" resource.type=\"cloudsql_database\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_MEAN",
+                    "crossSeriesReducer": "REDUCE_SUM"
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1",
+              "legendTemplate": "connections"
+            }
+          ],
+          "yAxis": {
+            "label": "connections",
+            "scale": "LINEAR"
+          },
+          "chartOptions": {
+            "mode": "COLOR"
+          }
+        }
+      },
+      {
+        "title": "Memorystore: สัดส่วนหน่วยความจำที่ใช้",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"redis.googleapis.com/stats/memory/usage_ratio\" resource.type=\"redis_instance\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_MEAN",
+                    "crossSeriesReducer": "REDUCE_MAX"
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1",
+              "legendTemplate": "memory usage ratio"
+            }
+          ],
+          "yAxis": {
+            "label": "ratio",
+            "scale": "LINEAR"
+          },
+          "chartOptions": {
+            "mode": "COLOR"
+          }
+        }
+      },
+      {
+        "title": "Cloud Storage: คำขอ/วินาที (อัปโหลด vs โหลดรูป)",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"storage.googleapis.com/api/request_count\" resource.type=\"gcs_bucket\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_RATE",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": [
+                      "metric.label.method"
+                    ]
+                  }
+                }
+              },
+              "plotType": "STACKED_AREA",
+              "targetAxis": "Y1",
+              "legendTemplate": "${metric.labels.method}"
+            }
+          ],
+          "yAxis": {
+            "label": "req/s",
+            "scale": "LINEAR"
+          },
+          "chartOptions": {
+            "mode": "COLOR"
+          }
+        }
+      }
+    ]
+  }
+}

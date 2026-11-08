@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Instrument+Serif&family=Inter:wght@400;500;600&family=Noto+Serif+Thai:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <title>ตั้งกระทู้ — BoardKub</title>
+</head>
+<body>
+<header class="topbar">
+  <div class="inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark" aria-hidden="true"><img src="img/plane.svg" alt=""></span>
+      <span class="brand-name">BoardKub</span>
+    </a>
+    <div class="navpill">
+      <a href="index.html">หน้าแรก</a>
+      <a href="categories.html">หมวดหมู่</a>
+      <div class="searchbox">
+        <label class="visually-hidden" for="search-input">ค้นหากระทู้</label>
+        <input type="search" id="search-input" placeholder="ค้นหากระทู้ เช่น ทุน กยศ.">
+      </div>
+    </div>
+    <nav class="topnav" id="nav-area"></nav>
+  </div>
+</header>
+<main class="wrap narrow">
+  <div class="page-head">
+    <h1 id="head">ตั้งกระทู้ใหม่</h1>
+    <p id="sub"></p>
+  </div>
+  <div id="alert" class="alert"></div>
+
+  <div class="panel">
+    <div class="field">
+      <label for="title">หัวข้อกระทู้</label>
+      <input type="text" id="title" maxlength="200" placeholder="เช่น ทุน ก. ต้องใช้เอกสารอะไรบ้าง">
+      <p class="hint">หัวข้อที่ชัดเจนช่วยให้คนอื่นค้นเจอกระทู้นี้ในภายหลัง</p>
+    </div>
+    <div class="field">
+      <label for="content">เนื้อหา</label>
+      <textarea id="content" maxlength="20000" placeholder="อธิบายรายละเอียดของคำถามหรือประกาศ..."></textarea>
+    </div>
+    <div class="field">
+      <label for="images">รูปประกอบ <span class="hint-inline">(ไม่บังคับ · สูงสุด 4 รูป · JPG/PNG)</span></label>
+      <input type="file" id="images" accept="image/jpeg,image/png" multiple>
+      <div class="thumbs" id="thumbs"></div>
+      <p class="hint">รูปจะถูกย่อและลบข้อมูลตำแหน่ง (GPS) ออกก่อนอัปโหลด</p>
+    </div>
+    <div class="btn-row">
+      <button type="button" class="btn" id="submit">เผยแพร่</button>
+      <a class="btn ghost" id="cancel" href="categories.html">ยกเลิก</a>
+    </div>
+  </div>
+
+  <p class="footnote"><span id="podbar"></span></p>
+</main>
+<script src="js/app.js"></script>
+<script>
+(async function () {
+  await initPage();
+  if (!requireLogin()) return;
+
+  const boardId = qs('boardId');
+  const editId = qs('editId');
+
+  // Images: ones already on the post (edit mode) and new ones picked now
+  let existing = [];        // [{id, url}]
+  const removed = new Set(); // ids of existing images to delete on save
+  let picked = [];          // [{blob, name, url}]
+
+  function renderThumbs() {
+    const keep = existing.filter(function (im) { return !removed.has(im.id); });
+    const html = keep.map(function (im) {
+      return '<div class="thumb"><img src="' + esc(safeImageUrl(im.url)) + '" alt="">' +
+        '<button type="button" class="thumb-x" data-rm-old="' + im.id + '" aria-label="ลบรูป">×</button></div>';
+    }).concat(picked.map(function (im, i) {
+      return '<div class="thumb new"><img src="' + esc(im.url) + '" alt="">' +
+        '<button type="button" class="thumb-x" data-rm-new="' + i + '" aria-label="ลบรูป">×</button></div>';
+    }));
+    document.getElementById('thumbs').innerHTML = html.join('');
+    document.querySelectorAll('[data-rm-old]').forEach(function (b) {
+      b.onclick = function () { removed.add(Number(b.dataset.rmOld)); renderThumbs(); };
+    });
+    document.querySelectorAll('[data-rm-new]').forEach(function (b) {
+      b.onclick = function () {
+        const [gone] = picked.splice(Number(b.dataset.rmNew), 1);
+        URL.revokeObjectURL(gone.url);
+        renderThumbs();
+      };
+    });
+    const total = keep.length + picked.length;
+    document.getElementById('images').disabled = total >= MAX_IMAGES_PER_POST;
+  }
+
+  document.getElementById('images').onchange = async function () {
+    hideAlert('alert');
+    const files = Array.from(this.files || []);
+    this.value = '';
+    for (const f of files) {
+      const total = existing.filter(function (im) { return !removed.has(im.id); }).length + picked.length;
+      if (total >= MAX_IMAGES_PER_POST) {
+        showAlert('alert', 'แนบรูปได้ไม่เกิน ' + MAX_IMAGES_PER_POST + ' รูปต่อกระทู้');
+        break;
+      }
+      try { picked.push(await shrinkImage(f)); }
+      catch (e) { showAlert('alert', e.message); }
+    }
+    renderThumbs();
+  };
+
+  if (editId) {
+    document.getElementById('head').textContent = 'แก้ไขกระทู้';
+    try {
+      const p = await API.post(editId);
+      if (!p.canEdit) { showAlert('alert', 'คุณไม่มีสิทธิ์แก้ไขกระทู้นี้'); return; }
+      document.getElementById('title').value = p.title;
+      document.getElementById('content').value = p.content;
+      document.getElementById('sub').textContent = 'ในบอร์ด ' + p.boardName;
+      document.getElementById('cancel').href = 'post.html?id=' + p.id;
+      existing = p.images || [];
+      renderThumbs();
+    } catch (e) { showAlert('alert', e.message); return; }
+  } else if (boardId) {
+    try {
+      const b = await API.board(boardId);
+      document.getElementById('sub').textContent = 'ในบอร์ด ' + b.name;
+      document.getElementById('cancel').href = 'board.html?id=' + boardId;
+    } catch (e) { showAlert('alert', e.message); }
+  } else {
+    location.href = 'categories.html';
+    return;
+  }
+
+  document.getElementById('submit').onclick = async function () {
+    const title = document.getElementById('title').value.trim();
+    const content = document.getElementById('content').value.trim();
+    if (!title || !content) { showAlert('alert', 'กรุณากรอกหัวข้อและเนื้อหาให้ครบ'); return; }
+    const btn = this;
+    btn.disabled = true;
+    let postId;
+    try {
+      if (editId) {
+        await API.updatePost(editId, { title: title, content: content });
+        postId = editId;
+      } else {
+        const created = await API.createPost(boardId, { title: title, content: content });
+        postId = created.id;
+      }
+    } catch (e) { showAlert('alert', e.message); btn.disabled = false; return; }
+
+    // The post is saved; now sync its images (deletions first to free slots)
+    try {
+      for (const id of removed) await API.deleteImage(id);
+      for (let i = 0; i < picked.length; i++) {
+        btn.textContent = 'กำลังอัปโหลดรูป ' + (i + 1) + '/' + picked.length + '...';
+        await API.uploadImage(postId, picked[i].blob, picked[i].name);
+      }
+    } catch (e) {
+      showAlert('alert', 'บันทึกกระทู้แล้ว แต่จัดการรูปไม่สำเร็จ: ' + e.message);
+      btn.textContent = 'ไปที่กระทู้';
+      btn.disabled = false;
+      btn.onclick = function () { location.href = 'post.html?id=' + postId; };
+      return;
+    }
+    location.href = 'post.html?id=' + postId;
+  };
+})();
+</script>
+</body>
+</html>
