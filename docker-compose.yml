@@ -33,7 +33,7 @@ services:
     build: ./backend
     container_name: kmitl-backend
     environment:
-      DB_URL: jdbc:mysql://mysql:3306/kmitl_connect?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Bangkok&characterEncoding=UTF-8
+      DB_URL: jdbc:mysql://mysql:3306/kmitl_connect?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
       DB_USERNAME: kmitl
       DB_PASSWORD: kmitlpass
       REDIS_HOST: redis

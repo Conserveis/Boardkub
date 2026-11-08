@@ -37,7 +37,7 @@ configMapGenerator:
       - MEDIA_LOCAL_DIR=/data/media
   - name: backend-infra
     literals:
-      - DB_URL=jdbc:mysql://mysql:3306/boardkub?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Bangkok&characterEncoding=UTF-8
+      - DB_URL=jdbc:mysql://mysql:3306/boardkub?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
       - REDIS_HOST=redis
       - REDIS_DATABASE=0
       - CORS_ORIGINS=http://boardkub.local

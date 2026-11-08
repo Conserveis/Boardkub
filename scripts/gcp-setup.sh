@@ -74,8 +74,7 @@ if ! exists gcloud sql instances describe "$SQL_INSTANCE"; then
     --network="$NETWORK_URI" --no-assign-ip --ssl-mode=ENCRYPTED_ONLY \
     --storage-type=SSD --storage-size=10 --storage-auto-increase \
     --backup-start-time=19:00 --enable-bin-log --retained-backups-count=7 \
-    --database-flags=character_set_server=utf8mb4 \
-    --time-zone=Asia/Bangkok
+    --database-flags=character_set_server=utf8mb4
 fi
 for db in boardkub_staging boardkub_production; do
   exists gcloud sql databases describe "$db" --instance "$SQL_INSTANCE" ||

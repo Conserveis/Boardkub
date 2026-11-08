@@ -33,7 +33,7 @@ if [ -n "$DOMAIN" ]; then
 else
   CORS_ORIGINS="${CORS_ORIGINS:-http://localhost:8080}"
 fi
-DB_URL="jdbc:mysql://${CLOUDSQL_IP}:3306/${DB_NAME}?sslMode=REQUIRED&serverTimezone=Asia/Bangkok&characterEncoding=UTF-8"
+DB_URL="jdbc:mysql://${CLOUDSQL_IP}:3306/${DB_NAME}?sslMode=REQUIRED&serverTimezone=UTC&characterEncoding=UTF-8"
 
 echo "==> Namespace $NAMESPACE"
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -

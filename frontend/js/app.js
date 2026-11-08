@@ -155,7 +155,7 @@ function timeAgo(iso) {
   if (diff < 3600) return Math.floor(diff / 60) + ' นาทีที่แล้ว';
   if (diff < 86400) return Math.floor(diff / 3600) + ' ชั่วโมงที่แล้ว';
   if (diff < 604800) return Math.floor(diff / 86400) + ' วันที่แล้ว';
-  return then.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
+  return then.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function showAlert(id, message, type = 'error') {
