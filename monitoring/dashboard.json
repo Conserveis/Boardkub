@@ -94,7 +94,6 @@
             {
               "value": 0.7,
               "label": "HPA target 70%",
-              "color": "YELLOW",
               "direction": "ABOVE",
               "targetAxis": "Y1"
             }
@@ -243,7 +242,6 @@
             {
               "value": 1000,
               "label": "1 s",
-              "color": "YELLOW",
               "direction": "ABOVE",
               "targetAxis": "Y1"
             }
@@ -342,7 +340,6 @@
             {
               "value": 0.8,
               "label": "80%",
-              "color": "YELLOW",
               "direction": "ABOVE",
               "targetAxis": "Y1"
             }
