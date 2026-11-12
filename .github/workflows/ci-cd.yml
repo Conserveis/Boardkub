@@ -72,12 +72,20 @@ jobs:
       - name: Scan images with Trivy (fail on fixable HIGH/CRITICAL)
         env:
           PREFIX: ${{ steps.vars.outputs.image_prefix }}
+        # Scans both images before failing so every finding shows up in one run.
+        # Accepted risks are listed, with reasons, in .trivyignore.yaml.
         run: |
+          rc=0
           for img in backend frontend; do
-            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$TRIVY_IMAGE" \
+            echo "::group::Trivy $img"
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+              -v "$PWD/.trivyignore.yaml:/.trivyignore.yaml:ro" "$TRIVY_IMAGE" \
               image --exit-code 1 --ignore-unfixed --severity HIGH,CRITICAL --no-progress \
-              "$PREFIX/$img:${GITHUB_SHA}"
+              --ignorefile /.trivyignore.yaml \
+              "$PREFIX/$img:${GITHUB_SHA}" || rc=1
+            echo "::endgroup::"
           done
+          exit $rc
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2

@@ -1,0 +1,10 @@
+# Vulnerabilities we accept on purpose. Trivy (CI step "Scan images") skips these.
+# Every entry needs a reason and an expiry date, so it is reviewed again.
+vulnerabilities:
+  - id: CVE-2026-47884
+    statement: >
+      Spring Framework RCE via improper path limitation in XsltView. Fixed only in
+      Spring Framework 7.0.9 (Spring Boot 4.x); there is no 6.2.x fix. BoardKub never
+      uses XsltView or any XSLT view: the backend only returns JSON from @RestController.
+      Remove this entry after upgrading to Spring Boot 4.
+    expired_at: 2027-01-31

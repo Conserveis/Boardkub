@@ -1,4 +1,8 @@
-FROM nginx:1.27-alpine
+# "stable" follows the current stable nginx line, which receives security fixes
+FROM nginx:stable-alpine
+
+# Apply OS security updates published after the base image was built
+RUN apk upgrade --no-cache
 
 COPY css/ /usr/share/nginx/html/css/
 COPY js/  /usr/share/nginx/html/js/

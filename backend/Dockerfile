@@ -13,6 +13,11 @@ RUN mvn -B clean package -DskipTests
 FROM eclipse-temurin:17-jre
 WORKDIR /app
 
+# Apply OS security updates published after the base image was built
+RUN apt-get update \
+ && apt-get -y upgrade --no-install-recommends \
+ && rm -rf /var/lib/apt/lists/*
+
 # Fixed numeric UID/GID so Kubernetes can verify runAsNonRoot (k8s/base/backend.yaml)
 RUN groupadd --system --gid 10001 app \
  && useradd --system --uid 10001 --gid 10001 --no-create-home app
