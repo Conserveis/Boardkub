@@ -193,13 +193,13 @@ code {
 .flight .plane { position: absolute; right: 0; top: 0; width: 104px; }
 .hero-ghost { background: rgba(19, 35, 63, .28); border-color: rgba(255, 255, 255, .55); color: var(--white); }
 .hero-ghost:hover { background: rgba(19, 35, 63, .45); }
-.scroll-hint {
-  margin-top: auto; margin-bottom: 26px;
-  display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%;
-  background: var(--white); color: var(--ink);
-  box-shadow: 0 8px 24px -8px rgba(18, 52, 120, .45);
+/* Which Pod answered: sits at the bottom of the landing hero for the stateless demo */
+/* The landing page is a single screen, so it needs no room below for the clouds */
+body.landing { padding-bottom: 0; }
+.hero-full .hero-pod {
+  margin-top: auto; margin-bottom: 22px; padding-top: 32px;
+  font-size: 12.5px; color: var(--muted); text-shadow: none;
 }
-.scroll-hint:hover { background: var(--sun); }
 
 .why {
   position: relative; z-index: 1;
