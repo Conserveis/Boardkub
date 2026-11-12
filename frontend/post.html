@@ -64,7 +64,7 @@
 
       document.getElementById('post-card').innerHTML =
         '<h1>' + esc(p.title) + '</h1>' +
-        '<p class="meta">' + esc(p.authorName) + ' · ' + timeAgo(p.createdAt) +
+        '<p class="meta">' + authorLink(p.authorName, p.authorId) + ' · ' + timeAgo(p.createdAt) +
         (p.updatedAt ? ' · แก้ไข ' + timeAgo(p.updatedAt) : '') +
         ' · ' + p.viewCount + ' เข้าชม</p>' +
         '<div class="post-body">' + esc(p.content) + '</div>' +
@@ -113,7 +113,7 @@
             '<button type="button" class="btn danger sm" data-del="' + c.id + '">ลบ</button></span>'
           : '';
         return '<div class="comment"><div class="c-head">' +
-          '<span class="c-author">' + esc(c.authorName) + '</span>' +
+          '<span class="c-author">' + authorLink(c.authorName, c.authorId) + '</span>' +
           (c.authorRole === 'ADMIN' ? '<span class="tag-admin">ผู้ดูแล</span>' : '') +
           '<span class="c-time">' + timeAgo(c.createdAt) + (c.updatedAt ? ' (แก้ไขแล้ว)' : '') + '</span>' +
           acts + '</div>' +

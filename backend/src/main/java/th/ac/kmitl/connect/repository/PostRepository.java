@@ -18,6 +18,14 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     /** Most viewed posts on boards that are still open; newer first when views tie. */
     List<Post> findTop5ByBoardActiveTrueOrderByViewCountDescCreatedAtDesc();
 
+    /** A member's posts, for the profile page; posts on closed boards stay hidden. */
+    Page<Post> findByUserIdAndBoardActiveTrue(Long userId, Pageable pageable);
+
+    long countByUserIdAndBoardActiveTrue(Long userId);
+
+    @Query("SELECT COALESCE(SUM(p.viewCount), 0) FROM Post p WHERE p.user.id = :userId AND p.board.active = true")
+    long sumViewsByUser(@Param("userId") Long userId);
+
     @Query("SELECT p FROM Post p WHERE LOWER(p.title) LIKE LOWER(CONCAT('%', :q, '%'))")
     Page<Post> searchByTitle(@Param("q") String q, Pageable pageable);
 
