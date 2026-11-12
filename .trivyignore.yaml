@@ -8,3 +8,11 @@ vulnerabilities:
       uses XsltView or any XSLT view: the backend only returns JSON from @RestController.
       Remove this entry after upgrading to Spring Boot 4.
     expired_at: 2027-01-31
+  - id: CVE-2026-47890
+    statement: >
+      Spring Framework stream corruption in Server-Sent Events (SSE) rendered with views.
+      Fixed only in Spring Framework 7.0.9 (Spring Boot 4.x); there is no 6.2.x fix.
+      BoardKub sends no Server-Sent Events: no SseEmitter, ResponseBodyEmitter,
+      text/event-stream endpoint or WebFlux anywhere in the backend.
+      Remove this entry after upgrading to Spring Boot 4.
+    expired_at: 2027-01-31
