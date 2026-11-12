@@ -132,8 +132,14 @@ code {
 .topnav { display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .topnav a, .topnav span { color: var(--white); }
 .topnav .who {
-  padding: 7px 14px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 4px 14px 4px 4px; border-radius: 999px;
   background: rgba(255, 255, 255, .16); border: 1px solid rgba(255, 255, 255, .32);
+}
+.topnav .who:hover { background: rgba(255, 255, 255, .28); text-decoration: none; }
+.topnav .who-avatar {
+  display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--white); color: var(--sky-deep); font-size: 13px; font-weight: 600;
 }
 .topnav .btn.ghost { background: rgba(255, 255, 255, .14); border-color: rgba(255, 255, 255, .45); color: var(--white); }
 .topnav .btn.ghost:hover { background: rgba(255, 255, 255, .26); }
@@ -391,6 +397,37 @@ body.landing { padding-bottom: 0; }
 .post-main .p-title:hover { color: var(--link); }
 .post-main .p-meta { display: block; margin-top: 3px; font-size: 13px; color: var(--muted); }
 
+/* Author names link to their profile, but read as plain text until hovered */
+a.author { color: inherit; font-weight: 600; }
+a.author:hover { color: var(--link); }
+
+[hidden] { display: none !important; }
+
+/* ---------- Profile ---------- */
+
+.profile-card {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 22px 26px;
+  margin-bottom: 26px; padding: 28px; border-radius: var(--r-row);
+  background: var(--white); box-shadow: 0 1px 0 var(--line);
+}
+.profile-card .grow { flex: 1 1 260px; min-width: 0; }
+.profile-card h1 { font-size: 46px; line-height: 1.3; word-break: break-word; }
+.profile-card .p-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 6px; font-size: 14px; color: var(--muted); }
+.profile-card .p-email { margin-top: 4px; font-size: 13.5px; color: var(--muted); }
+.profile-card .cat-stats { flex-basis: auto; }
+.profile-card .btn-row { flex-basis: 100%; margin-top: 0; padding-top: 18px; border-top: 1px solid var(--line); }
+.avatar-lg {
+  flex-shrink: 0; display: grid; place-items: center;
+  width: 96px; height: 96px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--sky-light), var(--sky-deep));
+  box-shadow: 0 10px 26px -10px rgba(18, 52, 120, .55), 0 0 0 5px var(--tint);
+  font-family: var(--serif); font-size: 46px; line-height: 1; color: var(--white);
+}
+.settings-grid { display: grid; grid-template-columns: 1fr 1fr; align-items: start; gap: 18px; margin-bottom: 26px; }
+.settings-grid .panel { margin-bottom: 0; }
+.settings-grid .panel h2 { font-size: 26px; }
+.section-title { margin-bottom: 14px; font-size: 30px; }
+
 /* ---------- Post detail ---------- */
 
 .post-detail h1 { font-size: 52px; margin-bottom: 12px; text-wrap: balance; }
@@ -555,6 +592,12 @@ input[type="file"]::file-selector-button {
   .cat-row { padding: 18px; }
   .cat-stats { gap: 16px; }
   .cat-name { font-size: 28px; }
+  .settings-grid { grid-template-columns: 1fr; }
+  .profile-card { padding: 22px 18px; }
+  .profile-card h1 { font-size: 36px; }
+  .avatar-lg { width: 76px; height: 76px; font-size: 36px; }
+  .topnav .who { padding-right: 4px; font-size: 0; }   /* avatar only on phones */
+  .topnav .who .who-avatar { font-size: 13px; }
 }
 
 @media (max-width: 860px) {

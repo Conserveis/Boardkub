@@ -62,6 +62,12 @@ public class PostService {
                 .toList();
     }
 
+    /** Posts written by one member, newest first, for the profile page. */
+    @Transactional(readOnly = true)
+    public PostDtos.PageResponse<PostDtos.PostSummary> listByUser(Long userId, int page, int size) {
+        return toPage(postRepository.findByUserIdAndBoardActiveTrue(userId, pageable(page, size, "latest")));
+    }
+
     @Transactional(readOnly = true)
     public PostDtos.PageResponse<PostDtos.PostSummary> search(String q, int page, int size) {
         if (q == null || q.isBlank()) {

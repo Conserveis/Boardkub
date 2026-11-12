@@ -107,7 +107,7 @@
             p.commentCount + '</span><span class="l">ตอบ</span></span>' +
             '<span class="post-main">' +
             '<a class="p-title" href="post.html?id=' + p.id + '">' + esc(p.title) + '</a>' +
-            '<span class="p-meta">' + esc(p.authorName) + ' · ' + timeAgo(p.createdAt) +
+            '<span class="p-meta">' + authorLink(p.authorName, p.authorId) + ' · ' + timeAgo(p.createdAt) +
             ' · ' + p.viewCount + ' เข้าชม</span></span></div>';
         }).join('');
       }

@@ -76,6 +76,11 @@ const API = {
   },
   deleteImage: (id) => api('/images/' + id, { method: 'DELETE' }),
 
+  profile: (id) => api('/users/' + id),
+  userPosts: (id, page, size) => api('/users/' + id + '/posts?page=' + page + '&size=' + size),
+  updateMe: (body) => api('/users/me', { method: 'PUT', body }),
+  changePassword: (body) => api('/users/me/password', { method: 'PUT', body }),
+
   comments: (postId) => api('/posts/' + postId + '/comments'),
   addComment: (postId, body) => api('/posts/' + postId + '/comments', { method: 'POST', body }),
   updateComment: (id, body) => api('/comments/' + id, { method: 'PUT', body }),
@@ -143,6 +148,19 @@ function esc(str) {
     .replace(/'/g, '&#39;');
 }
 
+/** First visible letter of a name, for avatar circles (skips Thai vowels/marks that cannot stand alone). */
+function initial(name) {
+  const chars = Array.from(String(name || '').trim());
+  const c = chars.find((ch) => !/[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E\u0E40-\u0E44]/.test(ch));
+  return (c || '?').toUpperCase();
+}
+
+/** Author name that links to the member's profile. */
+function authorLink(name, id) {
+  if (!id) return esc(name);
+  return '<a class="author" href="profile.html?id=' + encodeURIComponent(id) + '">' + esc(name) + '</a>';
+}
+
 function qs(name) {
   return new URLSearchParams(window.location.search).get(name);
 }
@@ -155,7 +173,7 @@ function timeAgo(iso) {
   if (diff < 3600) return Math.floor(diff / 60) + ' นาทีที่แล้ว';
   if (diff < 86400) return Math.floor(diff / 3600) + ' ชั่วโมงที่แล้ว';
   if (diff < 604800) return Math.floor(diff / 86400) + ' วันที่แล้ว';
-  return then.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', year: 'numeric', month: 'short', day: 'numeric' });
+  return then.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function showAlert(id, message, type = 'error') {
@@ -200,7 +218,9 @@ function renderTopbar(activeSearch = '') {
       const adminLink = CURRENT_USER.role === 'ADMIN'
         ? '<a class="btn ghost sm" href="admin.html">จัดการระบบ</a>' : '';
       nav.innerHTML = adminLink +
-        '<span class="who">' + esc(CURRENT_USER.displayName) + '</span>' +
+        '<a class="who" href="profile.html" title="โปรไฟล์ของฉัน">' +
+        '<span class="who-avatar" aria-hidden="true">' + esc(initial(CURRENT_USER.displayName)) + '</span>' +
+        esc(CURRENT_USER.displayName) + '</a>' +
         '<a class="btn ghost sm" href="#" id="logout-link">ออกจากระบบ</a>';
       const lo = document.getElementById('logout-link');
       if (lo) {

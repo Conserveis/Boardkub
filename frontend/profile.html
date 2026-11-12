@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Instrument+Serif&family=Inter:wght@400;500;600&family=Noto+Serif+Thai:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <title>โปรไฟล์ — BoardKub</title>
+</head>
+<body>
+<header class="topbar">
+  <div class="inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark" aria-hidden="true"><img src="img/plane.svg" alt=""></span>
+      <span class="brand-name">BoardKub</span>
+    </a>
+    <div class="navpill">
+      <a href="index.html">หน้าแรก</a>
+      <a href="categories.html">หมวดหมู่</a>
+      <div class="searchbox">
+        <label class="visually-hidden" for="search-input">ค้นหากระทู้</label>
+        <input type="search" id="search-input" placeholder="ค้นหากระทู้ เช่น ทุน กยศ.">
+      </div>
+    </div>
+    <nav class="topnav" id="nav-area"></nav>
+  </div>
+</header>
+<main class="wrap narrow">
+  <div id="alert" class="alert"></div>
+  <section class="profile-card" id="profile-card"><div class="loading">กำลังโหลดโปรไฟล์...</div></section>
+
+  <section class="settings-grid" id="settings" hidden>
+    <div class="panel">
+      <h2>ชื่อที่แสดง</h2>
+      <div id="name-alert" class="alert"></div>
+      <div class="field">
+        <label for="display-name">ชื่อที่คนอื่นเห็นในกระทู้และความคิดเห็น</label>
+        <input type="text" id="display-name" maxlength="60" autocomplete="nickname">
+        <p class="hint">2–60 ตัวอักษร</p>
+      </div>
+      <button type="button" class="btn" id="save-name">บันทึกชื่อ</button>
+    </div>
+    <div class="panel">
+      <h2>เปลี่ยนรหัสผ่าน</h2>
+      <div id="pw-alert" class="alert"></div>
+      <div class="field">
+        <label for="pw-current">รหัสผ่านปัจจุบัน</label>
+        <input type="password" id="pw-current" autocomplete="current-password">
+      </div>
+      <div class="field">
+        <label for="pw-new">รหัสผ่านใหม่</label>
+        <input type="password" id="pw-new" autocomplete="new-password" maxlength="72">
+        <p class="hint">อย่างน้อย 8 ตัวอักษร และไม่ควรซ้ำกับรหัสที่ใช้กับเว็บอื่น</p>
+      </div>
+      <div class="field">
+        <label for="pw-confirm">ยืนยันรหัสผ่านใหม่</label>
+        <input type="password" id="pw-confirm" autocomplete="new-password" maxlength="72">
+      </div>
+      <button type="button" class="btn" id="save-pw">เปลี่ยนรหัสผ่าน</button>
+    </div>
+  </section>
+
+  <h2 class="section-title" id="posts-title">กระทู้</h2>
+  <div id="posts"><div class="loading">กำลังโหลดกระทู้...</div></div>
+  <div class="pager" id="pager"></div>
+</main>
+<script src="js/app.js"></script>
+<script>
+(async function () {
+  await initPage();
+  // No id = my own profile, which needs a login
+  let userId = qs('id');
+  if (!userId) {
+    if (!requireLogin()) return;
+    userId = CURRENT_USER.id;
+  }
+
+  const fmtDate = (iso) => new Date(iso).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+  const num = (n) => Number(n || 0).toLocaleString('th-TH');
+  let profile = null;
+
+  function renderCard() {
+    const p = profile;
+    document.title = p.displayName + ' — BoardKub';
+    const role = p.role === 'ADMIN'
+      ? '<span class="tag-admin">ผู้ดูแลระบบ</span>'
+      : '<span class="chip">นักศึกษา</span>';
+    document.getElementById('profile-card').innerHTML =
+      '<span class="avatar-lg" aria-hidden="true">' + esc(initial(p.displayName)) + '</span>' +
+      '<div class="grow">' +
+        '<h1>' + esc(p.displayName) + '</h1>' +
+        '<p class="p-sub">' + role + '<span>เป็นสมาชิกตั้งแต่ ' + fmtDate(p.joinedAt) + '</span></p>' +
+        (p.me && p.email ? '<p class="p-email">' + esc(p.email) + ' · เห็นเฉพาะคุณ</p>' : '') +
+      '</div>' +
+      '<div class="cat-stats">' +
+        '<span><span class="n">' + num(p.postCount) + '</span><span class="l">กระทู้</span></span>' +
+        '<span><span class="n">' + num(p.commentCount) + '</span><span class="l">ความคิดเห็น</span></span>' +
+        '<span><span class="n">' + num(p.totalViews) + '</span><span class="l">ยอดเข้าชมรวม</span></span>' +
+      '</div>' +
+      (p.me ? '<div class="btn-row"><button type="button" class="btn ghost sm" id="toggle-settings">' +
+        'ตั้งค่าบัญชี</button></div>' : '');
+    document.getElementById('posts-title').textContent = p.me ? 'กระทู้ของฉัน' : 'กระทู้ของ ' + p.displayName;
+
+    const t = document.getElementById('toggle-settings');
+    if (t) {
+      t.onclick = function () {
+        const box = document.getElementById('settings');
+        box.hidden = !box.hidden;
+        t.textContent = box.hidden ? 'ตั้งค่าบัญชี' : 'ปิดการตั้งค่า';
+        if (!box.hidden) document.getElementById('display-name').focus();
+      };
+    }
+  }
+
+  try {
+    profile = await API.profile(userId);
+    renderCard();
+  } catch (e) {
+    document.getElementById('profile-card').innerHTML = '<div class="empty">ไม่พบสมาชิกที่ต้องการ</div>';
+    document.getElementById('posts-title').hidden = true;
+    document.getElementById('posts').innerHTML = '';
+    return;
+  }
+
+  // ---------- Account settings (own profile only) ----------
+  if (profile.me) {
+    const nameInput = document.getElementById('display-name');
+    nameInput.value = profile.displayName;
+
+    document.getElementById('save-name').onclick = async function () {
+      hideAlert('name-alert');
+      const name = nameInput.value.trim();
+      if (name.length < 2) { showAlert('name-alert', 'ชื่อต้องมีอย่างน้อย 2 ตัวอักษร'); return; }
+      this.disabled = true;
+      try {
+        const me = await API.updateMe({ displayName: name });
+        CURRENT_USER = me;
+        profile.displayName = me.displayName;
+        renderTopbar();
+        renderCard();
+        document.getElementById('toggle-settings').textContent = 'ปิดการตั้งค่า';
+        showAlert('name-alert', 'บันทึกชื่อเรียบร้อยแล้ว', 'ok');
+      } catch (e) {
+        showAlert('name-alert', e.message);
+      } finally {
+        this.disabled = false;
+      }
+    };
+
+    document.getElementById('save-pw').onclick = async function () {
+      hideAlert('pw-alert');
+      const cur = document.getElementById('pw-current');
+      const nw = document.getElementById('pw-new');
+      const cf = document.getElementById('pw-confirm');
+      if (!cur.value) { showAlert('pw-alert', 'กรุณากรอกรหัสผ่านปัจจุบัน'); return; }
+      if (nw.value.length < 8) { showAlert('pw-alert', 'รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร'); return; }
+      if (nw.value !== cf.value) { showAlert('pw-alert', 'รหัสผ่านใหม่ทั้งสองช่องไม่ตรงกัน'); return; }
+      this.disabled = true;
+      try {
+        await API.changePassword({ currentPassword: cur.value, newPassword: nw.value });
+        cur.value = nw.value = cf.value = '';
+        showAlert('pw-alert', 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว', 'ok');
+      } catch (e) {
+        showAlert('pw-alert', e.message);
+      } finally {
+        this.disabled = false;
+      }
+    };
+  }
+
+  // ---------- Posts by this member ----------
+  let page = 0;
+  const size = 10;
+
+  async function loadPosts() {
+    const box = document.getElementById('posts');
+    try {
+      const data = await API.userPosts(userId, page, size);
+      if (!data.items.length) {
+        box.innerHTML = '<div class="empty">' +
+          (profile.me ? 'คุณยังไม่ได้ตั้งกระทู้ <a href="categories.html?view=all">เลือกบอร์ดแล้วเริ่มกระทู้แรก</a>'
+                      : 'สมาชิกคนนี้ยังไม่ได้ตั้งกระทู้') + '</div>';
+        document.getElementById('pager').innerHTML = '<span class="podbar" id="podbar"></span>';
+        renderPodBar();
+        return;
+      }
+      box.innerHTML = data.items.map(function (p) {
+        return '<div class="post-row">' +
+          '<span class="post-count"><span class="n' + (p.commentCount ? '' : ' zero') + '">' +
+          p.commentCount + '</span><span class="l">ตอบ</span></span>' +
+          '<span class="post-main">' +
+          '<a class="p-title" href="post.html?id=' + p.id + '">' + esc(p.title) + '</a>' +
+          '<span class="p-meta">ใน <a href="board.html?id=' + p.boardId + '">' + esc(p.boardName) + '</a>' +
+          ' · ' + timeAgo(p.createdAt) + ' · ' + num(p.viewCount) + ' เข้าชม</span></span></div>';
+      }).join('');
+
+      const nav = data.totalPages > 1
+        ? '<button type="button" class="btn ghost sm" id="prev"' + (page <= 0 ? ' disabled' : '') + '>ก่อนหน้า</button>' +
+          '<span class="pinfo">หน้า ' + (data.page + 1) + ' / ' + data.totalPages + '</span>' +
+          '<button type="button" class="btn ghost sm" id="next"' + (page >= data.totalPages - 1 ? ' disabled' : '') + '>ถัดไป</button>'
+        : '';
+      document.getElementById('pager').innerHTML = nav + '<span class="podbar" id="podbar"></span>';
+      const prev = document.getElementById('prev');
+      const next = document.getElementById('next');
+      const top = () => document.getElementById('posts-title').scrollIntoView({ behavior: 'smooth' });
+      if (prev) prev.onclick = function () { page--; loadPosts(); top(); };
+      if (next) next.onclick = function () { page++; loadPosts(); top(); };
+      renderPodBar();
+    } catch (e) {
+      box.innerHTML = '';
+      showAlert('alert', e.message);
+    }
+  }
+  loadPosts();
+})();
+</script>
+</body>
+</html>

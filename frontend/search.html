@@ -65,7 +65,7 @@
           p.commentCount + '</span><span class="l">ตอบ</span></span>' +
           '<span class="post-main">' +
           '<a class="p-title" href="post.html?id=' + p.id + '">' + esc(p.title) + '</a>' +
-          '<span class="p-meta">ใน ' + esc(p.boardName) + ' · ' + esc(p.authorName) +
+          '<span class="p-meta">ใน ' + esc(p.boardName) + ' · ' + authorLink(p.authorName, p.authorId) +
           ' · ' + timeAgo(p.createdAt) + ' · ' + p.viewCount + ' เข้าชม</span></span></div>';
       }).join('');
 
