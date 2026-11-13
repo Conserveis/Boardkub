@@ -249,9 +249,11 @@ function renderTopbar(activeSearch = '') {
 }
 
 /** Shows which Pod answered, so multi-Pod scaling can be demonstrated. */
+/** Shows which Pod answered, for the scaling and stateless demos. Admins only. */
 async function renderPodBar() {
   const el = document.getElementById('podbar');
   if (!el) return;
+  if (!CURRENT_USER || CURRENT_USER.role !== 'ADMIN') { el.textContent = ''; return; }
   try {
     const info = await API.whoami();
     el.innerHTML = 'Pod <code>' + esc(info.servedByPod) + '</code>'

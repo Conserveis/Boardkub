@@ -116,7 +116,7 @@ kubectl -n boardkub-local scale deployment/backend --replicas=4
 | POST | `/api/auth/login` | – | เข้าสู่ระบบ |
 | POST | `/api/auth/logout` | – | ออกจากระบบ |
 | GET | `/api/auth/me` | login | ข้อมูลผู้ใช้ปัจจุบัน |
-| GET | `/api/auth/whoami` | – | บอกว่า Pod ไหนตอบ (ใช้สาธิต scaling) |
+| GET | `/api/auth/whoami` | แอดมิน | บอกว่า Pod ไหนตอบ (ใช้สาธิต scaling) |
 | GET | `/api/categories` | – | รายการหมวดหมู่ |
 | GET | `/api/boards?categoryId=` | – | รายการบอร์ด |
 | GET | `/api/boards/{id}/posts` | – | กระทู้ในบอร์ด (paginated, sort=latest\|views) |

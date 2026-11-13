@@ -15,7 +15,7 @@ kubectl -n boardkub-production get pods,hpa  # ทุก Pod ต้อง Runnin
 
 | หน้าต่าง | เปิดอะไร |
 |---|---|
-| เบราว์เซอร์แท็บ 1 | `https://$DOMAIN` (ล็อกอินไว้แล้ว) |
+| เบราว์เซอร์แท็บ 1 | `https://$DOMAIN` (ล็อกอินด้วย**บัญชีแอดมิน**ไว้แล้ว แถบชื่อ Pod โชว์เฉพาะแอดมิน) |
 | เบราว์เซอร์แท็บ 2 | Cloud Console → Monitoring → Dashboards → **BoardKub — Production** (ตั้งช่วงเวลา 1 ชั่วโมงล่าสุด) |
 | Terminal A | `kubectl -n boardkub-production get hpa backend -w` |
 | Terminal B | ไว้รันคำสั่งสาธิต |
@@ -32,7 +32,7 @@ kubectl -n boardkub-production get pods,hpa  # ทุก Pod ต้อง Runnin
 3. ในหน้ากระทู้ คลิกขวาที่รูป → Open image in new tab แล้วชี้ให้ดู URL
    `https://storage.googleapis.com/<bucket>/production/....jpg`
    ซึ่งแสดงว่ารูปมาจาก **Object Storage** โดยตรง ไม่ได้ผ่าน Pod
-4. แถบล่างของเว็บแสดงชื่อ Pod ที่ตอบ request นี้อยู่
+4. แถบล่างของเว็บแสดงชื่อ Pod ที่ตอบ request นี้อยู่ (เห็นเฉพาะตอนล็อกอินเป็นแอดมิน ผู้ใช้ทั่วไปไม่เห็นข้อมูลภายในนี้)
 
 **สิ่งที่พูด:** ข้อความเก็บใน Cloud SQL, session เก็บใน Memorystore, รูปเก็บใน Cloud Storage
 แต่ละบริการตอบโจทย์ข้อมูลคนละชนิด

@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import th.ac.kmitl.connect.dto.AuthDtos;
+import th.ac.kmitl.connect.interceptor.annotation.RequireAdmin;
 import th.ac.kmitl.connect.interceptor.annotation.RequireLogin;
 import th.ac.kmitl.connect.service.AuthService;
 import th.ac.kmitl.connect.service.CurrentUser;
@@ -66,6 +67,7 @@ public class AuthController {
      * session survives across Pods once the Deployment is scaled out.
      */
     @GetMapping("/whoami")
+    @RequireAdmin   // Pod names are internal details, so only admins (the demo account) see them
     public ResponseEntity<Map<String, Object>> whoami(HttpSession session) {
         Long id = currentUser.idOrNull(session);
         Map<String, Object> body = new LinkedHashMap<>();

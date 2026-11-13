@@ -28,10 +28,16 @@
   </div>
 </header>
 <section class="hero hero-full">
-  <div class="flight" aria-hidden="true">
-    <svg class="trail" viewBox="0 0 400 80" preserveAspectRatio="none"><path d="M2 76 C 120 70, 260 50, 398 10" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-dasharray="2 9" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>
-    <img class="plane" src="img/plane.svg" alt="">
-  </div>
+  <!-- Trail and plane share one drawing, so the trail always ends at the plane's tail -->
+  <svg class="flight" viewBox="0 0 520 150" aria-hidden="true">
+    <path class="flight-trail" d="M6 138 C 150 140, 360 140, 446 76" fill="none" stroke="#ffffff"
+          stroke-width="2.5" stroke-dasharray="2 9" stroke-linecap="round"/>
+    <g class="flight-plane" transform="translate(400 20)">
+      <path d="M4 38 L116 4 L70 76 L54 50 Z" fill="#ffffff"/>
+      <path d="M116 4 L54 50 L58 66 Z" fill="#d7e5f8"/>
+      <path d="M54 50 L70 76 L58 66 Z" fill="#b9cfee"/>
+    </g>
+  </svg>
   <h1>ถามมา ตอบไป<br>หาเจอทุกครั้ง</h1>
   <p>เว็บบอร์ดของนักศึกษา รวมเรื่องทุน วิชาเรียน และกิจกรรมไว้ในที่เดียว แยกเป็นหมวดหมู่ ทุกกระทู้มีที่อยู่ถาวร ค้นย้อนหลังได้เสมอ</p>
   <div class="hero-actions">

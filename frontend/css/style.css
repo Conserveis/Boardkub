@@ -194,9 +194,15 @@ code {
 .hero-link { color: var(--white); font-weight: 600; font-size: 15px; text-decoration: underline; text-underline-offset: 5px; text-decoration-color: rgba(255, 255, 255, .5); }
 .hero-link:hover { text-decoration-color: var(--white); }
 /* Plane and its dotted trail fly in a strip above the headline, never across the text */
-.flight { position: relative; width: min(520px, 78%); height: 92px; margin: 0 auto 4px; }
-.flight .trail { position: absolute; left: 0; right: 92px; top: auto; bottom: 8px; width: auto; height: 70px; }
-.flight .plane { position: absolute; right: 0; top: 0; width: 104px; }
+.flight { display: block; width: min(520px, 78%); height: auto; margin: 0 auto 4px; overflow: visible; }
+.flight-plane { filter: drop-shadow(0 10px 14px rgba(18, 52, 120, .28)); }
+.flight-trail { opacity: .85; animation: trail-in 1.6s ease-out both; }
+/* The plane glides in along the trail's direction and stops exactly at its end */
+.flight-plane > path { animation: glide-in 1.6s cubic-bezier(.2, .7, .2, 1) both; }
+@keyframes glide-in {
+  from { opacity: 0; transform: translate(-64px, 48px); }
+  to   { opacity: 1; transform: none; }
+}
 .hero-ghost { background: rgba(19, 35, 63, .28); border-color: rgba(255, 255, 255, .55); color: var(--white); }
 .hero-ghost:hover { background: rgba(19, 35, 63, .45); }
 /* Which Pod answered: sits at the bottom of the landing hero for the stateless demo */
@@ -608,19 +614,16 @@ input[type="file"]::file-selector-button {
   .step-list::before { display: none; }
   .steps, .cta-band { margin-top: 64px; }
   .hero-full { padding-top: 28px; }
-  .flight { height: 64px; }
-  .flight .plane { width: 66px; }
-  .flight .trail { right: 60px; height: 48px; display: block; }
+  .flight { width: min(360px, 86%); }
 }
 
 /* Short laptop windows: keep the clouds low so they never sit behind white hero text */
 @media (max-height: 760px) {
   body::before { display: none; }
-  .flight { height: 70px; }
-  .flight .plane { width: 80px; }
+  .flight { width: min(400px, 70%); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .plane, .trail { animation: none; }
+  .plane, .trail, .flight-trail, .flight-plane > path { animation: none; }
   .btn { transition: none; }
 }
